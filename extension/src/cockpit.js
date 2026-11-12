@@ -158,6 +158,8 @@ const GRCockpit = (() => {
     // Classic: .comment-body. New Overview (React): article#issuecomment-… with .markdown-body.
     for (const body of document.querySelectorAll("main .comment-body, main .js-comment-body, main article:is([id^='issuecomment-'], [id^='pullrequestreview-']) .markdown-body")) {
       if (body.closest("[data-gr-desc], .js-resolvable-timeline-thread-container, #gr-cockpit, #gr-panel")) continue;
+      // The new-comment form (classic) has its own preview .comment-body: it is not a comment.
+      if (body.closest(".js-preview-body, #issue-comment-box, .timeline-new-comment, form.js-new-comment-form, [aria-label='Add comment form']")) continue;
       const box = body.closest("article:is([id^='issuecomment-'], [id^='pullrequestreview-']), [id^='issuecomment-'], .timeline-comment-group, .TimelineItem") || body.parentElement;
       if (box.matches("article") && body.closest("article") !== box) continue; // conversation inside the review
       const key = box.id || box;
