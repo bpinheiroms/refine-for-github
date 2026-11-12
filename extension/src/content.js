@@ -740,8 +740,8 @@
       if (d.closest("#gr-modal, #gr-panel, [class*='prc-PageLayout-SidebarWrapper-']") || d.querySelector("[role='menu'], [role='listbox']")) continue;
       const head = (document.getElementById(d.getAttribute("aria-labelledby") || "")?.textContent
         || d.querySelector("h1, h2, h3, [class*='Title'], [class*='title']")?.textContent || d.getAttribute("aria-label") || "").trim();
-      // checks, merge queue entry status ("Queue entry status details")
-      if (/\bchecks?\b|status details/i.test(head) || /^entry-status-dialog/.test(d.id)) d.setAttribute("data-gr-drawer", "");
+      // checks, merge queue entry status ("Queue entry status details"), stacked PRs ("Stack #19177")
+      if (/\bchecks?\b|status details|^stack\b/i.test(head) || /^entry-status-dialog/.test(d.id)) d.setAttribute("data-gr-drawer", "");
     }
   }
 
