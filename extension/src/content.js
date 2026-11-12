@@ -778,6 +778,42 @@
       const t = (b.getAttribute("aria-labelledby") || "").split(" ").map((id) => document.getElementById(id)?.textContent?.trim()).filter(Boolean).join(" ")
         || b.getAttribute("aria-label") || "";
       if (t && b.getAttribute("data-gr-label") !== t) b.setAttribute("data-gr-label", t);
+    }    groupQueueByEstimate();
+  }
+
+  // Merge queue: entries grouped by their estimated merge time ("Next 30 minutes",
+  // "Within an hour"…). GitHub lists them in merge order, so each group is one run of
+  // rows; a small header (our own <li>, the list is server-rendered) opens each run.
+  const QUEUE_BUCKETS = [[30, "Next 30 minutes"], [60, "Within an hour"], [120, "1–2 hours"], [Infinity, "More than 2 hours"]];
+  const estimateMinutes = (row) => {
+    const m = row.textContent.replace(/\s+/g, " ").match(/Estimated merge in\s+((?:\d+\s*[dhms]\s*)+)/i);
+    if (!m) return null;
+    let min = 0;
+    for (const [, n, u] of m[1].matchAll(/(\d+)\s*([dhms])/g)) min += +n * { d: 1440, h: 60, m: 1, s: 1 / 60 }[u];
+    return min;
+  };
+  function groupQueueByEstimate() {
+    for (const list of new Set([...document.querySelectorAll("main .hx_merge_queue_entry_status_icon")].map((b) => b.closest("ul")).filter(Boolean))) {
+      const rows = [...list.children].filter((li) => li.matches("li:not(.gr-queue-group)"));
+      const labels = rows.map((r) => { const m = estimateMinutes(r); return m == null ? "No estimate" : QUEUE_BUCKETS.find(([max]) => m <= max)[1]; });
+      // Same groups as last time: leave the page alone (our own inserts re-trigger the observer).
+      const sig = labels.join("|");
+      if (list.getAttribute("data-gr-queue-sig") === sig && list.querySelector(":scope > .gr-queue-group")) continue;
+      list.querySelectorAll(":scope > .gr-queue-group").forEach((g) => g.remove());
+      list.setAttribute("data-gr-queue-sig", sig);
+      // Only worth it with more than one group.
+      if (new Set(labels).size < 2) continue;
+      rows.forEach((row, i) => {
+        if (i > 0 && labels[i] === labels[i - 1]) return;
+        let n = 0;
+        for (let j = i; j < rows.length && labels[j] === labels[i]; j++) n++;
+        const head = document.createElement("li");
+        head.className = "gr-queue-group";
+        head.setAttribute("role", "presentation");
+        head.append(Object.assign(document.createElement("span"), { textContent: labels[i] }),
+          Object.assign(document.createElement("span"), { className: "gr-queue-n", textContent: String(n) }));
+        row.before(head);
+      });
     }
   }
 
