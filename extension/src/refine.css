@@ -291,10 +291,12 @@ html[data-gr-compact-sidebar] [data-gr-sb] :is(h2, h3, [class*="Heading"], [clas
 }
 /* GitHub hover backgrounds that paint only part of the row */
 html[data-gr-compact-sidebar] [data-gr-sb] :is([role="button"], button:not([data-component="IconButton"]), summary, a):hover { background: none !important; }
-html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] {
+/* (new sidebar only: the classic .discussion-sidebar-item nests the title in a form/details
+   with a floated gear, so it stays stacked: title + gear on top, value below) */
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:not(.discussion-sidebar-item) {
   display: flex !important; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px;
 }
-html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] > * { margin: 0 !important; padding: 0 !important; min-height: 0 !important; background: none !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:not(.discussion-sidebar-item) > * { margin: 0 !important; padding: 0 !important; min-height: 0 !important; background: none !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(h2, h3, [class*="Heading"], [class*="sectionTitle"], [class*="SectionTitle"]) { color: var(--fgColor-muted) !important; font-weight: 500 !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(p, span, a, div) { font-size: 12.5px !important; line-height: 20px !important; padding-block: 0 !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(p, span, a):not(:has(*)) { color: var(--fgColor-muted) !important; }
@@ -341,7 +343,9 @@ html[data-gr-pr-number] .gr-pr-num:hover {
    hidden; the cockpit buttons reopen each one (data-gr-show-*).
    ========================================================================= */
 
-html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-mergebox],
+/* The summary is off (SHOW_SUMMARY in cockpit.js): GitHub's merge box stays visible and
+   #gr-cockpit is only an empty anchor for the panel. */
+#gr-cockpit:empty { display: none !important; }
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar]):not([data-gr-stacked]) [data-gr-pane] {
   display: none !important;
 }
@@ -351,6 +355,7 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) #gr-panel { display: bloc
 /* New Overview comments: they live in the panel's Comments tab, not in the column.
    Commits and the new-comment box stay in place. */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) main [data-testid="timeline-item"]:has(article:is([id^="issuecomment-"], [id^="pullrequestreview-"])),
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) main .js-timeline-item:has(> .TimelineItem > .timeline-comment-group[id^="issuecomment-"], [id^="pullrequestreview-"]):not(:has([data-gr-desc])),
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments) > [class*="controlsRow"],
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments) form:has(textarea) {
   display: none !important;
@@ -363,6 +368,19 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-com
 #gr-panel .gr-new { margin: 0 0 12px; padding: 10px; border: 1px solid var(--borderColor-muted); border-radius: 10px; background: var(--bgColor-muted); }
 #gr-panel .gr-new .gr-reply { min-height: 64px; font-size: 13px; }
 #gr-panel .gr-new .gr-cbar { margin-top: 8px; }
+/* Classic tab: GitHub's own comment box, moved into the Comments tab */
+#gr-panel .gr-gh-composer { margin: 0 0 12px; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer .timeline-new-comment { margin: 0 !important; padding: 0 !important; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer .timeline-new-comment > .d-md-block:has(.timeline-comment-avatar),
+:is(#gr-panel, #gr-modal) .gr-gh-composer legend,
+:is(#gr-panel, #gr-modal) .gr-gh-composer .timeline-new-comment > :is(.protip, .text-small.color-fg-muted) { display: none !important; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer .CommentBox { border-radius: 10px; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer textarea { min-height: 96px !important; font-size: 13px; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer .CommentBox-container { height: auto !important; }
+/* Narrow column: Write | Preview on one row, the formatting toolbar below it */
+:is(#gr-panel, #gr-modal) .gr-gh-composer .CommentBox-header { flex-wrap: wrap; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer .CommentBox-toolbar { flex: 1 0 100%; min-width: 0; overflow: hidden; border-top: 1px solid var(--borderColor-muted); }
+:is(#gr-panel, #gr-modal) .gr-gh-composer .ActionBar-item-container { flex-wrap: wrap; }
 /* Alignment: GitHub centers the header in a 1356px box. The columns
    (cockpit + panel) use the same box, and so does the sticky top bar, so
    title, tabs, cockpit and panel start and end on the same lines. */
@@ -379,6 +397,12 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [class*="miniHeaderInner"
   padding-left: calc(24px + max(0px, (100% - 1420px) / 2)) !important;
   padding-right: calc(32px + max(0px, (100% - 1420px) / 2)) !important;
 }
+/* Long drafts or previews (images, videos) scroll inside the box instead of
+   stretching it: the Comment button stays next to what is being written. */
+:is(#gr-panel, #gr-modal) .gr-gh-composer textarea { max-height: 40vh !important; overflow: auto !important; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer :is(.js-preview-body, .preview-content) { max-height: 40vh; overflow: auto; }
+:is(#gr-panel, #gr-modal) .gr-gh-composer :is(img, video) { max-width: 100%; height: auto; }
+#gr-modal .gr-composer.gr-gh-composer { max-height: 60vh; overflow: auto; }
 
 /* Details tab when the sidebar can't go into the panel: it shows up
    in the right column and the panel tabs sit above it, at its top. */
@@ -408,6 +432,8 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [da
   font: 13px/1.45 var(--fontStack-sansSerif, -apple-system, sans-serif);
   color: var(--fgColor-default);
 }
+/* Classic Conversation tab: no sticky bar on top, so the panel sticks near the edge */
+html[data-gr-actions-inline] #gr-panel { top: 16px; max-height: calc(100vh - 32px); }
 /* Narrow screen: panel right below the cockpit, not sticky */
 #gr-panel[data-stacked] {
   /* In the new Overview the parent is a column flex: without this the panel goes last
@@ -514,6 +540,10 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
 :is(#gr-modal, #gr-panel) .gr-btn.gr-pri { background: var(--button-primary-bgColor-rest, #238636); border-color: transparent; color: var(--button-primary-fgColor-rest, #fff); }
 :is(#gr-modal, #gr-panel) .gr-btn.gr-ghostbtn { background: none; border-color: transparent; color: var(--fgColor-muted); }
 #gr-modal .gr-mbody > * { margin: 0 !important; }
+/* Classic comments: the card is pulled left (-16px, next to the avatar) and has a speech-bubble arrow */
+#gr-modal .gr-mbody .timeline-comment { margin-left: 0 !important; margin-right: 0 !important; }
+#gr-modal .gr-mbody .timeline-comment::before,
+#gr-modal .gr-mbody .timeline-comment::after { display: none !important; }
 .gr-flash { outline: 2px solid var(--gr-accent, var(--fgColor-accent)) !important; outline-offset: 4px; border-radius: 8px; transition: outline-color 1s; }
 
 #gr-cockpit {
@@ -714,7 +744,7 @@ html[data-gr-debug] [data-gr-row][data-gr-bot]::after { content: attr(data-gr-st
 
 /* Classic conversation moved into the modal: GitHub's reply box and "Resolve"
    are hidden (they keep working behind our field). */
-#gr-modal .gr-mbody :is(.review-thread-reply, .js-inline-comment-form-container, .js-resolvable-thread-toggler-container, .js-toggle-inline-comment-form) { display: none !important; }
+#gr-modal:not([data-native]) .gr-mbody :is(.review-thread-reply, .js-inline-comment-form-container, .js-resolvable-thread-toggler-container, .js-toggle-inline-comment-form) { display: none !important; }
 
 /* PR header: title and actions (Preview, Code, bell) always on the same line.
    On medium screens GitHub pushes the actions to their own line above the title.
@@ -934,6 +964,9 @@ html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] > div
   color: var(--fgColor-default); font: 500 12px var(--fontStack-sansSerif, sans-serif); cursor: pointer;
 }
 .gr-am-btn:hover { border-color: var(--fgColor-muted); }
+/* Classic Conversation tab (no sticky bar): the button sits at the end of the title row */
+html[data-gr-actions-inline] [data-gr-pr-header] > .gr-am-btn { position: absolute; top: 4px; right: 0; z-index: 121; height: 28px; margin: 0; }
+html[data-gr-actions-inline] [data-gr-pr-header] > [class*="prc-PageHeader-TitleArea-"] { padding-right: 104px !important; }
 .gr-am {
   position: fixed; z-index: 400; min-width: 240px; padding: 4px; display: flex; flex-direction: column;
   border: 1px solid var(--borderColor-default); border-radius: 12px; background: var(--overlay-bgColor, var(--bgColor-default));
@@ -982,7 +1015,7 @@ html[data-gr-accent] [class*="miniHeaderInner"] [class*="metadata__"] > :not([cl
   html[data-gr-one-header] [class*="miniHeaderInner"] [class*="actions__"] { pointer-events: auto; }
   html[data-gr-one-header] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] { padding-right: var(--gr-bar-acts-w, 320px) !important; }
   /* space at the top the bar used to take: the title sits higher */
-  html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 16px !important; }
+  html[data-gr-actions-menu]:not([data-gr-actions-inline]) [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 16px !important; }
 }
 
 /* Line balance (+N net) next to the diffstat */
@@ -1091,7 +1124,7 @@ html[data-gr-accent] :has(> [data-overview-sidebar-item]) { gap: 0 !important; r
   html[data-gr-one-header] [class*="miniHeaderInner"] { justify-content: flex-end !important; }
   html[data-gr-one-header] [class*="miniHeaderInner"] [class*="metadata__"] { display: none !important; }
   .gr-am-btn { height: 32px; }
-  html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 12px !important; }
+  html[data-gr-actions-menu]:not([data-gr-actions-inline]) [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 12px !important; }
   /* slightly smaller title on mobile */
   html[data-gr-accent][data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, [class*="prc-Heading"]) { font-size: 20px !important; line-height: 28px !important; }
 }
@@ -1173,6 +1206,8 @@ html[data-gr-fullpage] [class*="prc-PageLayout-HeaderContent"] [class*="prc-Page
 /* Overview also full width (same pattern as Files changed): columns without the
    1356px box; the panel keeps its usual width. */
 html[data-gr-fullpage][data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] { max-width: none !important; margin-inline: 0 !important; }
+/* Classic Conversation tab: the page sits in a 1280px .container-xl box */
+html[data-gr-fullpage] main .container-xl:has([data-gr-pr-header]) { max-width: none !important; }
 /* GitHub focuses the title when switching tabs: no white outline around it */
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, a):focus:not(:focus-visible),
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2)[tabindex="-1"]:focus { outline: none !important; box-shadow: none !important; }
@@ -1271,3 +1306,87 @@ html[data-gr-queue][data-gr-accent] main .col-md-3 > hr { display: none; }
 /* native drawer (<dialog>): no double dark backdrop and with internal scrolling */
 html[data-gr-accent] dialog[data-gr-drawer]::backdrop { background: transparent; }
 html[data-gr-accent] dialog[data-gr-drawer] .Overlay-body { flex: 1; overflow: auto; }
+
+/* New PR page: the line balance (+N −N ▪▪▪ +net) sits at the right end of the tabs
+   row, as on the classic page, instead of after the branches. React node: only CSS
+   positions it (the header is position: relative and the tabs row is its last row). */
+@media (min-width: 768px) {
+  html[data-gr-accent] [class*="prc-PageHeader-PageHeader-"]:has(> [class*="prc-PageHeader-Navigation"]) { position: relative; }
+  html[data-gr-accent] [class*="prc-PageHeader-PageHeader-"]:has(> [class*="prc-PageHeader-Navigation"]) [class*="branchGroup__"] > [class*="diffStat__"] {
+    position: absolute; right: 0; bottom: 8px; height: 32px; display: flex; align-items: center; margin: 0 !important;
+  }
+  html[data-gr-accent] [class*="prc-PageHeader-PageHeader-"]:has([class*="branchGroup__"] > [class*="diffStat__"]) > [class*="prc-PageHeader-Navigation"] { padding-right: 200px; }
+}
+
+/* Rich editor (new Overview): same structure as GitHub's comment box —
+   Write | Preview, the formatting toolbar, the field and a footer. */
+.gr-ed { border: 1px solid var(--borderColor-default); border-radius: 10px; background: var(--bgColor-default); overflow: hidden; font: 13px var(--fontStack-sansSerif, sans-serif); }
+.gr-ed-head { display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bgColor-muted); border-bottom: 1px solid var(--borderColor-muted); }
+.gr-ed-tabs { display: flex; flex: 1 0 100%; }
+.gr-ed-tab { padding: 8px 14px; border: 0; border-right: 1px solid transparent; background: none; color: var(--fgColor-muted); font: inherit; cursor: pointer; }
+.gr-ed-tab[aria-selected="true"] { background: var(--bgColor-default); color: var(--fgColor-default); border-right-color: var(--borderColor-muted); margin-bottom: -1px; }
+.gr-ed-tab:first-child[aria-selected="true"] { border-top-left-radius: 9px; }
+.gr-ed-tools { display: flex; flex: 1 0 100%; flex-wrap: wrap; align-items: center; gap: 2px; padding: 4px 6px; border-top: 1px solid var(--borderColor-muted); background: var(--bgColor-default); }
+.gr-ed-tools[hidden] { display: none; }
+.gr-ed-tool { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--fgColor-muted); font: 600 12px var(--fontStack-sansSerif, sans-serif); cursor: pointer; }
+.gr-ed-tool:hover { background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-default); }
+.gr-ed-tool svg { width: 16px; height: 16px; fill: currentColor; }
+.gr-ed-sep { width: 1px; height: 18px; margin: 0 4px; background: var(--borderColor-muted); }
+.gr-ed-body { padding: 8px; }
+:is(#gr-modal, #gr-panel) .gr-ed .gr-reply { display: block; width: 100%; min-height: 96px; max-height: 40vh; margin: 0; resize: vertical; }
+.gr-ed .gr-reply[hidden] { display: none !important; }
+.gr-ed-preview { min-height: 96px; max-height: 40vh; overflow: auto; padding: 4px 6px; font-size: 13px !important; }
+.gr-ed-preview[hidden] { display: none; }
+.gr-ed-preview :is(img, video) { max-width: 100%; height: auto; }
+.gr-ed-note { margin: 0; color: var(--fgColor-muted); }
+.gr-ed-foot { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 10px; border-top: 1px solid var(--borderColor-muted); color: var(--fgColor-muted); font-size: 12px; }
+.gr-ed-attach { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 4px 6px; margin-left: -6px; border-radius: 6px; color: var(--fgColor-muted); font: inherit; cursor: pointer; }
+.gr-ed-attach svg { width: 16px; height: 16px; fill: currentColor; }
+.gr-ed-attach:hover { color: var(--fgColor-default); background: var(--bgColor-neutral-muted, #262c36); }
+.gr-ed-acts { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+:is(#gr-panel, #gr-modal) .gr-ed-acts .gr-btn { height: 30px; padding: 0 14px; }
+/* Status ("Comment sent.", errors) is a quiet line under the box, only when there is one. */
+:is(#gr-panel, #gr-modal) .gr-ed ~ .gr-rstatus { display: block; margin-top: 6px; }
+:is(#gr-panel, #gr-modal) .gr-ed ~ .gr-rstatus:empty { display: none; }
+/* The box already has its own frame: no second frame around it in the panel. */
+#gr-panel .gr-new:has(.gr-ed) { padding: 0; border: 0; background: none; }
+
+/* New Overview merge box (React, CSS only): a compact status strip.
+   Header: small icon, 14px title, quiet subtitle. Cells: label · count on one line
+   (the count GitHub keeps for screen readers becomes visible), summary on the right,
+   thin bars. "Not required" approvals: a flat neutral bar instead of the hatching. */
+html[data-gr-accent] [data-gr-mergebox][class*="CondensedForYouContainer"] { border-radius: 12px !important; border-color: var(--borderColor-muted) !important; overflow: hidden; }
+html[data-gr-accent] [data-gr-mergebox] [class*="Row__"] { padding: 12px 16px !important; min-height: 0 !important; column-gap: 12px !important; align-items: center !important; grid-template-columns: 28px minmax(0, 1fr) auto !important; }
+html[data-gr-accent] [data-gr-mergebox] :is([class*="Visual__"], [class*="statusIcon__"]) { width: 28px !important; height: 28px !important; min-width: 28px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="glyph__"] { width: 20px !important; height: 20px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="glyph__"] svg { width: 14px !important; height: 14px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="Title__"] { font: 600 14px/20px var(--fontStack-sansSerif, sans-serif) !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="SubText__"] { font-size: 12px !important; line-height: 18px !important; color: var(--fgColor-muted) !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatus__"] { padding: 12px 16px !important; min-height: 0 !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusLabelRow__"] { min-height: 0 !important; padding: 0 !important; margin: 0 0 8px !important; gap: 8px !important; align-items: center !important; height: 18px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusLabelRow__"] svg { width: 12px !important; height: 12px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusSummary__"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusLabelText__"] { font: 500 12px/18px var(--fontStack-sansSerif, sans-serif) !important; color: var(--fgColor-muted) !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusRatio__"] {
+  position: static !important; width: auto !important; height: auto !important; margin: 0 0 0 4px !important; padding: 0 !important;
+  clip: auto !important; clip-path: none !important; overflow: visible !important; white-space: nowrap !important;
+  font: 600 12px/18px var(--fontStack-sansSerif, sans-serif) !important; font-variant-numeric: tabular-nums; color: var(--fgColor-default) !important;
+}
+html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusSummary__"] { margin-left: auto !important; font-size: 12px !important; line-height: 18px !important; color: var(--fgColor-muted) !important; text-align: right; }
+html[data-gr-accent] [data-gr-mergebox] :is([class*="Bar__"], [class*="Unavailable__"], [class*="Segment__"]) { height: 4px !important; min-height: 4px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="Bar__"] { border-radius: 2px !important; overflow: hidden; }
+html[data-gr-accent] [data-gr-mergebox] [class*="Unavailable__"] { background: var(--bgColor-neutral-muted, #262c36) !important; background-image: none !important; border-radius: 2px !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="Separator__"] { display: none !important; }
+html[data-gr-accent] [data-gr-mergebox] [class*="Segment__"] + [class*="Segment__"], html[data-gr-accent] [data-gr-mergebox] [class*="Tooltip"] + [class*="Segment__"] { margin-left: 2px !important; }
+/* Narrow screens: action buttons side by side (wrapping), and the three cells stay on
+   one row (label + count; the long summary is dropped, the bar carries the state). */
+html[data-gr-accent] [data-gr-mergebox] [class*="Actions__"],
+html[data-gr-accent] [data-gr-mergebox] [class*="Actions__"] .flex-column { flex-direction: row !important; flex-wrap: wrap !important; gap: 8px !important; align-items: center !important; }
+@media (max-width: 767.98px) {
+  html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusWrapper__"] { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatus__"] { padding: 10px 12px !important; border-top: 0 !important; }
+  html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatus__"] + [class*="MiniStatus__"] { border-left: 1px solid var(--borderColor-muted) !important; }
+  html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusSummary__"] { display: none !important; }
+  html[data-gr-accent] [data-gr-mergebox] [class*="MiniStatusLabelRow__"] { gap: 4px !important; }
+  html[data-gr-accent] [data-gr-mergebox] [class*="Row__"] { padding: 12px !important; }
+}

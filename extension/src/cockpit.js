@@ -29,6 +29,9 @@ const GRCockpit = (() => {
   let renderedSig = null, panelSig = null;
   let refs = { threads: [], comments: [] }; // original elements, for the modal
   let expandedChecks = null;                // path where we already opened the checks list
+  // The "N things left before merging" summary is off: GitHub's own merge box stays in
+  // its place. The page is still read (the panel needs the conversations and comments).
+  const SHOW_SUMMARY = false;
 
   const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
   const text = (node) => clean(node?.textContent);
@@ -247,7 +250,8 @@ const GRCockpit = (() => {
     // Checks. The detailed list only exists once opened: we open it once.
     const checksCell = mergebox && cell(mergebox, "Checks", textNodes);
     let rows = readCheckRows(mergebox, textNodes);
-    if (!rows.length && checksCell && expandedChecks !== location.pathname) {
+    // (Only while the summary is shown: GitHub's own merge box is on screen now, so it is left as the user set it.)
+    if (SHOW_SUMMARY && !rows.length && checksCell && expandedChecks !== location.pathname) {
       expandedChecks = location.pathname;
       (checksCell.el.closest("button, [role='button']") || checksCell.el.querySelector("button, [role='button']") || checksCell.el).click();
     }
@@ -438,7 +442,7 @@ const GRCockpit = (() => {
   // keeps working. If it cannot be moved (new Overview, React),
   // the original sidebar appears right below the tabs (data-gr-show-sidebar),
   // so you can go back via the tabs.
-  let panelTab = "open";
+  let panelTab = "comments";
   let lastModel = null;
   let details = null; // { node, mark }
 
@@ -458,6 +462,50 @@ const GRCockpit = (() => {
       const mark = document.createComment("gr-details");
       node.replaceWith(mark);
       details = { node, mark };
+    }
+    host.append(node);
+    return true;
+  }
+
+  // Classic Conversation tab: GitHub's own new-comment box (Rails: toolbar, Preview,
+  // attachments, @mentions) moves into the Comments tab, with a marker in its place,
+  // instead of a second, simpler box. The new Overview's box is React: never moved.
+  let composerBox = null; // { node, mark }
+  // Where the box lives on the page: the timeline's last partial (Rails).
+  const composerHome = () => document.querySelector("rails-partial[data-partial-name$='TimelineActions']") || document.querySelector(".js-discussion");
+  // GitHub's box: the Rails new-comment form (never the React one, never a copy in the modal body).
+  function findComposer() {
+    const forms = [...document.querySelectorAll("form.js-new-comment-form")]
+      .filter((f) => !f.closest("[data-testid='timeline-item'], #gr-modal .gr-mbody"));
+    // A box GitHub rendered again on the page wins over an old one left in our panel.
+    const form = forms.find((f) => !f.closest("#gr-panel, #gr-modal")) || forms[0];
+    return form ? form.closest("#issue-comment-box") || form.closest(".timeline-new-comment") || form : null;
+  }
+  function unmountComposer() {
+    if (!composerBox) return;
+    const { node, mark } = composerBox;
+    if (mark.isConnected) mark.replaceWith(node);
+    // GitHub re-rendered the timeline (live update) and our marker went with it:
+    // the box goes back to the end of the timeline instead of being lost with the panel.
+    else if (node.closest("#gr-panel, #gr-modal") && !findComposerOnPage(node)) composerHome()?.append(node);
+    composerBox = null;
+  }
+  const findComposerOnPage = (except) => [...document.querySelectorAll("form.js-new-comment-form")]
+    .some((f) => !except.contains(f) && !f.closest("#gr-panel, #gr-modal, [data-testid='timeline-item']"));
+  function mountComposer(host) {
+    let node = composerBox?.node;
+    // Our box was replaced by a fresh one on the page (live update): use the fresh one.
+    if (node && (!node.isConnected || !composerBox.mark.isConnected) && findComposerOnPage(node)) {
+      composerBox = null;
+      node = null;
+    }
+    if (!node) {
+      node = findComposer();
+      if (!node) return false;
+      const mark = document.createComment("gr-composer");
+      if (node.closest("#gr-panel, #gr-modal")) composerHome()?.append(mark); // left in the panel earlier
+      else node.replaceWith(mark);
+      composerBox = { node, mark };
     }
     host.append(node);
     return true;
@@ -487,6 +535,7 @@ const GRCockpit = (() => {
       if (stacked) unmountDetails();
       if (stacked || !mountDetails(host)) root.setAttribute("data-gr-show-sidebar", "");
       else root.removeAttribute("data-gr-show-sidebar");
+      unmountComposer();
       return;
     }
     unmountDetails();
@@ -503,8 +552,11 @@ const GRCockpit = (() => {
     const emptyBox = h("div", { class: "gr-empty", "data-kind": panelTab },
       h("span", { class: "gr-eicon" }, E[0]), h("b", {}, E[1]), h("p", {}, E[2]),
       links.length ? h("div", { class: "gr-empty-acts" }, links) : null);
+    const composerHost = panelTab === "comments" ? h("div", { class: "gr-gh-composer" }) : null;
+    const original = composerHost && mountComposer(composerHost);
+    if (!composerHost) unmountComposer();
     panel.replaceChildren(bar, h("div", { class: "gr-list", role: "tabpanel" },
-      panelTab === "comments" && pageComposer() ? newComment() : null,
+      original ? composerHost : panelTab === "comments" && pageComposer() ? newComment() : null,
       list.length ? list : emptyBox));
   }
 
@@ -513,14 +565,23 @@ const GRCockpit = (() => {
   // and suggestions keep working there. We only move what the server
   // rendered (Rails: turbo-frame / js-* elements); the rest becomes a copy.
   let moved = null; // { orig, mark }
+  let modalQuote = null; // { field, text }: GitHub's comment box in the modal footer
 
   function closeModal() {
+    const hadComposer = !!modalQuote;
+    if (modalQuote) {
+      // Untouched quote: GitHub's box goes back to the panel empty.
+      if (modalQuote.field.value === modalQuote.text) fill(modalQuote.field, "");
+      modalQuote = null;
+    }
     if (moved) {
       moved.unhidden.forEach((n) => (n.hidden = true));
       moved.mark.replaceWith(moved.orig);
       moved = null;
     }
     document.getElementById("gr-modal")?.remove();
+    // GitHub's comment box was in the modal footer: back to the Comments tab (or its place).
+    if (hadComposer && lastModel) { panelSig = null; renderPanel(lastModel); }
     document.removeEventListener("keydown", onKey, true);
   }
   function onKey(e) {
@@ -590,12 +651,163 @@ const GRCockpit = (() => {
   // The page's (hidden) new-comment box: used by the panel and by replies.
   const pageComposer = () => document.querySelector("#new_comment_field, form.js-new-comment-form textarea, main textarea[name='comment[body]'], main textarea[placeholder*='comment' i]");
 
+  // ---------- rich editor (new Overview) ----------
+  // GitHub's box there is React: it can't be moved into the panel. Our field gets the
+  // same tools, and the hidden React box does the GitHub-side work: Preview (it renders
+  // the markdown) and attachments (it uploads the file and writes the link).
+
+  const MD_TOOLS = [
+    ["heading", "Heading", "H"], ["bold", "Bold", "B"], ["italic", "Italic", "I"], null,
+    ["quote", "Quote", "❝"], ["code", "Code", "<>"], ["link", "Link", "🔗"], null,
+    ["ol", "Numbered list", "1."], ["ul", "Unordered list", "•"], ["task", "Task list", "☐"], null,
+    ["mention", "Mention", "@"],
+  ];
+  // GitHub's own icon for a tool, copied from the toolbar of the page's (React) box.
+  function toolIcon(label) {
+    const engine = pageComposer();
+    const box = engine && engineBox(engine);
+    const name = (b) => [b.getAttribute("aria-label"), ...["aria-labelledby", "aria-describedby"].flatMap((k) => (b.getAttribute(k) || "").split(" ").map((id) => id && document.getElementById(id)?.textContent))]
+      .filter(Boolean).join(" ").trim().toLowerCase() || b.textContent.trim().toLowerCase();
+    const btn = [...(box?.querySelectorAll("button") || [])].find((b) => name(b).startsWith(label.toLowerCase()) && b.querySelector("svg"));
+    return btn ? btn.querySelector("svg").cloneNode(true) : null;
+  }
+  // Same edits as GitHub's markdown toolbar: wrap the selection, or prefix each selected line.
+  function applyMd(field, kind) {
+    const v = field.value;
+    let s = field.selectionStart, e = field.selectionEnd;
+    const sel = v.slice(s, e);
+    const wrap = (l, r, ph) => { const t = sel || ph; field.setRangeText(`${l}${t}${r}`, s, e, "end"); field.setSelectionRange(s + l.length, s + l.length + t.length); };
+    const lines = (fn) => {
+      s = v.lastIndexOf("\n", s - 1) + 1;
+      const block = v.slice(s, e);
+      const out = block.split("\n").map((l, i) => fn(i) + l).join("\n");
+      field.setRangeText(out, s, e, "end");
+    };
+    switch (kind) {
+      case "heading": lines(() => "### "); break;
+      case "bold": wrap("**", "**", "text"); break;
+      case "italic": wrap("_", "_", "text"); break;
+      case "quote": lines(() => "> "); break;
+      case "code": sel.includes("\n") ? wrap("```\n", "\n```", "") : wrap("`", "`", "code"); break;
+      case "link": { const t = sel || "text"; field.setRangeText(`[${t}](url)`, s, e, "end"); const u = s + t.length + 3; field.setSelectionRange(u, u + 3); break; }
+      case "ol": lines((i) => `${i + 1}. `); break;
+      case "ul": lines(() => "- "); break;
+      case "task": lines(() => "- [ ] "); break;
+      case "mention": field.setRangeText("@", s, e, "end"); break;
+    }
+    field.focus();
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // The React editor around the page's (hidden) comment box, and its Write/Preview tabs.
+  const engineBox = (t) => { let e = t; while (e && e !== document.body && !e.querySelector("[role='tablist']")) e = e.parentElement; return e && e !== document.body ? e : null; };
+  const engineTab = (box, re) => [...(box?.querySelectorAll("[role='tab'], button") || [])].find((b) => re.test(text(b)));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  async function waitFor(fn, ms = 6000) { for (let t = 0; t < ms; t += 120) { const v = fn(); if (v) return v; await sleep(120); } return null; }
+
+  // Preview through GitHub: the text goes into the hidden box, its Preview tab renders
+  // it, we show a copy, then the box gets its own text back.
+  let engineBusy = false;
+  async function renderPreview(md, pane) {
+    const engine = pageComposer();
+    const box = engine && engineBox(engine);
+    const tab = engineTab(box, /^preview$/i);
+    if (!engine || !tab || engineBusy) { pane.replaceChildren(h("p", { class: "gr-ed-note" }, "Preview isn't available here.")); return; }
+    engineBusy = true;
+    const saved = engine.value;
+    try {
+      if (!md.trim()) { pane.replaceChildren(h("p", { class: "gr-ed-note" }, "Nothing to preview")); return; }
+      pane.replaceChildren(h("p", { class: "gr-ed-note" }, "Loading preview…"));
+      fill(engine, md);
+      tab.click();
+      const body = await waitFor(() => { const b = box.querySelector(".markdown-body"); return b && (b.textContent.trim() || b.querySelector("img, video")) ? b : null; });
+      if (!pane.isConnected) return;
+      if (!body) { pane.replaceChildren(h("p", { class: "gr-ed-note" }, "Couldn't load the preview.")); return; }
+      const copy = body.cloneNode(true);
+      copy.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+      pane.replaceChildren(copy);
+    } finally {
+      engineTab(box, /^write$/i)?.click();
+      const back = await waitFor(() => pageComposer(), 2000);
+      if (back) fill(back, saved);
+      engineBusy = false;
+    }
+  }
+
+  // Attachments through GitHub: the files are dropped on the hidden box, which uploads
+  // them and writes the markdown link; that link comes into our field.
+  async function uploadFiles(files, field, status) {
+    const engine = pageComposer();
+    if (!engine || !files.length || engineBusy) { status.textContent = "Couldn't attach here."; return; }
+    engineBusy = true;
+    const saved = engine.value;
+    try {
+      fill(engine, "");
+      status.textContent = `Uploading ${files.length === 1 ? files[0].name : `${files.length} files`}…`;
+      const dt = new DataTransfer();
+      files.forEach((f) => dt.items.add(f));
+      engine.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
+      if (!(await waitFor(() => pageComposer()?.value, 1500))) {
+        const dt2 = new DataTransfer();
+        files.forEach((f) => dt2.items.add(f));
+        pageComposer()?.dispatchEvent(new ClipboardEvent("paste", { bubbles: true, cancelable: true, clipboardData: dt2 }));
+      }
+      const link = await waitFor(() => { const v = pageComposer()?.value || ""; return v.trim() && !/uploading/i.test(v) ? v.trim() : null; }, 60000);
+      if (!link) { status.textContent = "The upload didn't finish."; return; }
+      const s = field.selectionStart, pre = field.value.slice(0, s);
+      field.setRangeText(`${pre && !pre.endsWith("\n") ? "\n" : ""}${link}\n`, s, field.selectionEnd, "end");
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+      status.textContent = "";
+    } finally {
+      const back = pageComposer();
+      if (back) fill(back, saved);
+      engineBusy = false;
+    }
+  }
+
+  // Our field with GitHub's comment-box structure: Write | Preview, toolbar, footer.
+  function richEditor(field, status, actions = []) {
+    const preview = h("div", { class: "gr-ed-preview markdown-body", hidden: true });
+    const write = h("button", { type: "button", role: "tab", class: "gr-ed-tab", "aria-selected": "true" }, "Write");
+    const prev = h("button", { type: "button", role: "tab", class: "gr-ed-tab", "aria-selected": "false" }, "Preview");
+    const tools = h("div", { class: "gr-ed-tools", role: "toolbar" });
+    const show = (p) => {
+      write.setAttribute("aria-selected", String(!p)); prev.setAttribute("aria-selected", String(p));
+      field.hidden = p; preview.hidden = !p; tools.hidden = p;
+      if (p) renderPreview(field.value, preview); else field.focus();
+    };
+    write.addEventListener("click", () => show(false));
+    prev.addEventListener("click", () => show(true));
+    for (const t of MD_TOOLS) {
+      if (!t) { tools.append(h("span", { class: "gr-ed-sep" })); continue; }
+      const [kind, label, glyph] = t;
+      const b = h("button", { type: "button", class: "gr-ed-tool", title: label, "aria-label": label, onmousedown: (e) => e.preventDefault(), onclick: () => applyMd(field, kind) });
+      const icon = toolIcon(label);
+      icon ? b.append(icon) : (b.textContent = glyph);
+      tools.append(b);
+    }
+    const file = h("input", { type: "file", multiple: true, hidden: true });
+    file.addEventListener("change", () => { uploadFiles([...file.files], field, status); file.value = ""; });
+    field.addEventListener("paste", (e) => { const fs = [...(e.clipboardData?.files || [])]; if (fs.length) { e.preventDefault(); uploadFiles(fs, field, status); } });
+    field.addEventListener("dragover", (e) => { if (e.dataTransfer?.types?.includes("Files")) e.preventDefault(); });
+    field.addEventListener("drop", (e) => { const fs = [...(e.dataTransfer?.files || [])]; if (fs.length) { e.preventDefault(); uploadFiles(fs, field, status); } });
+    return h("div", { class: "gr-ed" },
+      h("div", { class: "gr-ed-head" }, h("div", { class: "gr-ed-tabs", role: "tablist" }, write, prev), tools),
+      h("div", { class: "gr-ed-body" }, field, preview),
+      // Footer: attach on the left, the send button(s) on the right, inside the box.
+      h("div", { class: "gr-ed-foot" },
+        h("button", { type: "button", class: "gr-ed-attach", title: "Paste, drop, or click to add files", onclick: () => file.click() },
+          toolIcon("Paste, drop") || "📎", "Add files"),
+        file,
+        h("div", { class: "gr-ed-acts" }, actions)));
+  }
+
   // New comment at the top of the Comments tab. Created only once, so the draft
   // survives when the panel is re-rendered.
   let newBox = null;
   function newComment() {
     if (newBox) return newBox;
-    const field = h("textarea", { class: "gr-reply", rows: "3", placeholder: "Write a comment…" });
+    const field = h("textarea", { class: "gr-reply", rows: "4", placeholder: "Add your comment here…" });
     const status = h("span", { class: "gr-rstatus" });
     const send = () => {
       const body = field.value.trim();
@@ -608,8 +820,9 @@ const GRCockpit = (() => {
       status.textContent = "Comment sent.";
     };
     field.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } });
-    newBox = h("div", { class: "gr-new" }, field,
-      h("div", { class: "gr-cbar" }, status, h("button", { type: "button", class: "gr-btn gr-pri", onclick: send }, "Comment ⌘↵")));
+    newBox = h("div", { class: "gr-new" },
+      richEditor(field, status, [h("button", { type: "button", class: "gr-btn gr-pri", title: "Comment (⌘↵)", onclick: send }, "Comment")]),
+      status);
     return newBox;
   }
 
@@ -634,12 +847,25 @@ const GRCockpit = (() => {
     };
     field.addEventListener("input", syncLabel);
     field.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(false); } });
-    return h("div", { class: "gr-composer" }, field,
-      h("div", { class: "gr-cbar" }, status,
-        resolveBtn,
-        h("button", { type: "button", class: "gr-btn gr-pri", onclick: () => send(false) }, "Reply ⌘↵")));
+    return h("div", { class: "gr-composer" },
+      richEditor(field, status, [resolveBtn, h("button", { type: "button", class: "gr-btn gr-pri", title: "Reply (⌘↵)", onclick: () => send(false) }, "Reply")]),
+      status);
   }
 
+
+  // Text the reader sees: without what is collapsed (<details> closed), diagrams and
+  // hidden bits. innerText of an off-screen copy keeps the line breaks.
+  function visibleText(node) {
+    if (!node) return "";
+    const copy = node.cloneNode(true);
+    copy.querySelectorAll("details:not([open]) > :not(summary), [hidden], template, svg, .sr-only, .js-render-enrichment-loader, [data-type='mermaid'] ~ *").forEach((n) => n.remove());
+    const box = Object.assign(document.createElement("div"), { style: "position:fixed;left:-10000px;top:0;width:600px" });
+    box.append(copy);
+    document.body.append(box);
+    const t = copy.innerText;
+    box.remove();
+    return t;
+  }
 
   function openModal(kind, i) {
     const orig = refs[kind][i];
@@ -658,6 +884,28 @@ const GRCockpit = (() => {
       content = readOnlyCopy(orig);
     }
 
+    // Classic page (conversation moved, not copied): GitHub's own reply boxes, with
+    // Write/Preview, toolbar and attachments. Code conversation: the thread's own
+    // reply form and "Resolve conversation" stay visible. Comment: the page's comment
+    // box comes into the footer, quoting the comment.
+    const native = !!moved;
+    let footer = null;
+    if (native && kind === "comments") {
+      const host = h("div", { class: "gr-composer gr-gh-composer" });
+      if (mountComposer(host)) {
+        footer = host;
+        const field = host.querySelector("textarea");
+        // What is visible (innerText skips collapsed <details>), quoted line by line, like GitHub's "Quote reply".
+        const body = orig.querySelector(".comment-body, .js-comment-body, .markdown-body");
+        const lines = visibleText(body).split("\n").map((l) => l.trim()).filter(Boolean);
+        let quote = lines.join("\n");
+        if (quote.length > 600) quote = `${quote.slice(0, 600).replace(/\s+\S*$/, "")}…`;
+        if (field && quote && !field.value.trim()) { const q = `${quote.split("\n").map((l) => `> ${l}`).join("\n")}\n\n`; fill(field, q); modalQuote = { field, text: q }; }
+        else if (field) modalQuote = { field, text: null };
+      }
+    }
+    if (!footer && !(native && kind === "threads")) footer = composer(kind, orig);
+
     // Clicking a link inside the conversation (e.g. "go to code") leads to another page: close the modal.
     const modal = h("div", { id: "gr-modal", onclick: (e) => {
       if (e.target.id === "gr-modal") return closeModal();
@@ -669,7 +917,8 @@ const GRCockpit = (() => {
           h("b", {}, kind === "threads" ? "Code conversation" : "Comment"),
           h("button", { type: "button", class: "gr-x", "aria-label": "Close", onclick: closeModal }, "×")),
         h("div", { class: "gr-mbody" }, content),
-        composer(kind, orig)));
+        footer));
+    if (native) modal.setAttribute("data-native", "");
     document.body.appendChild(modal);
     // Collapsed conversation in the new Overview: ask GitHub to expand it and refresh the copy.
     if (kind === "threads" && isNewThread(orig) && !orig.querySelector(".markdown-body")) {
@@ -682,7 +931,9 @@ const GRCockpit = (() => {
       }, 150);
     }
     document.addEventListener("keydown", onKey, true);
-    modal.querySelector(".gr-reply").focus();
+    const focus = modal.querySelector(".gr-reply, .gr-gh-composer textarea");
+    focus?.focus();
+    if (focus?.matches(".gr-gh-composer textarea")) focus.setSelectionRange(focus.value.length, focus.value.length);
   }
 
   // ---------- mounting ----------
@@ -691,7 +942,10 @@ const GRCockpit = (() => {
   // container, in place of the sidebar. Re-placed if React re-renders.
   let placedOnce = false;
   function place() {
-    const anchor = document.querySelector("[data-gr-mergebox]") || document.querySelector("[data-gr-desc]");
+    // The cockpit goes on top: before the merge box (new Overview, where it is above the
+    // description) or before the description (classic tab, merge box at the end of the timeline).
+    const box = document.querySelector("[data-gr-mergebox]"), desc = document.querySelector("[data-gr-desc]");
+    const anchor = box && desc && (desc.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING) ? desc : box || desc;
     if (!anchor?.parentElement) return false;
     if (!el.isConnected || el.nextElementSibling !== anchor) anchor.parentElement.insertBefore(el, anchor);
     const cols = document.querySelector("[data-gr-cols]");
@@ -791,7 +1045,8 @@ const GRCockpit = (() => {
     newBox = null;
     placedOnce = false;
     unmountDetails();
-    panelTab = "open";
+    unmountComposer();
+    panelTab = "comments";
     el?.remove();
     panel?.remove();
     closeModal();
@@ -808,20 +1063,22 @@ const GRCockpit = (() => {
     if (!panel) panel = h("aside", { id: "gr-panel", "aria-label": "Conversations and comments" });
     if (!place()) return;
     // Original Overview visible: the sidebar must be in its place.
-    if (root.hasAttribute("data-gr-cockpit-off") && details) { unmountDetails(); panelTab = "open"; panelSig = null; }
+    if (root.hasAttribute("data-gr-cockpit-off") && (details || composerBox)) { unmountDetails(); unmountComposer(); panelTab = "comments"; panelSig = null; }
 
     hydrateCollapsed();
     const m = readPage(textNodes);
     // With nothing recognized on an open PR, we leave the page alone.
     const usable = m.items.length > 0 || !/^(open|aberto|draft|rascunho)$/.test(m.prState);
     root.toggleAttribute("data-gr-cockpit-ready", usable);
-    if (!usable) { el.replaceChildren(); panel.replaceChildren(); renderedSig = panelSig = null; return; }
+    if (!usable) { unmountDetails(); unmountComposer(); el.replaceChildren(); panel.replaceChildren(); renderedSig = panelSig = null; return; }
 
     const { threads, comments, ...main } = m;
     const sig = JSON.stringify(main);
-    if (sig !== renderedSig) { renderedSig = sig; render(m); }
+    if (SHOW_SUMMARY && sig !== renderedSig) { renderedSig = sig; render(m); }
     const psig = JSON.stringify({ threads, comments });
-    if (psig !== panelSig) { panelSig = psig; renderPanel(m); }
+    // A conversation moved into the modal is not on the page: keep the panel as it was
+    // until the modal closes (otherwise its card and count vanish meanwhile).
+    if (psig !== panelSig && !moved) { panelSig = psig; renderPanel(m); }
   }
 
   return { update };

@@ -389,6 +389,8 @@
     return { bar, barActs, acts, toggles,
       preview: document.querySelector("[data-gr-preview-toggle]") || find(/preview/i),
       code: find(/^code\b/i), bell: find(/subscribe|notification/i),
+      // Classic Conversation tab: "✨ Try the Overview page" switches to the new UI.
+      overview: find(/try the overview page/i),
       review: barActs && [...barActs.querySelectorAll("button")].find((x) => /ReviewMenuButton/.test(x.className) || /^(submit )?review\b/i.test(labelOf(x))) };
   }
 
@@ -422,8 +424,9 @@
         p.review && root.hasAttribute("data-gr-pr-done") && item("Leave a review", () => p.review.click(), "comment only"),
         item("Download .patch", () => (location.href = `${base}.patch`)),
         item("Download .diff", () => (location.href = `${base}.diff`)),
-        p.preview && sep(),
-        p.preview && item("Switch to classic view", () => p.preview.click(), "Preview options"));
+        (p.preview || p.overview) && sep(),
+        p.preview && item("Switch to classic view", () => p.preview.click(), "Preview options"),
+        p.overview && item("Switch to Overview page", () => p.overview.click(), "new view"));
     document.body.append(menu);
     const r = anchor.getBoundingClientRect();
     Object.assign(menu.style, { top: `${Math.round(r.bottom + 6)}px`, left: `${Math.round(Math.max(8, r.right - menu.offsetWidth))}px` });
@@ -437,8 +440,13 @@
     headerRaf = 0;
     const p = headerParts();
     const title = document.querySelector('[class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"]') || document.querySelector("[data-gr-pr-title]");
-    const active = !!(settings.enabled && (isPullPage() || /\/pull\/\d+\/(changes|files|commits|checks)/.test(location.pathname)) && p.bar && p.barActs);
+    // Classic Conversation tab: no sticky bar, so the button sits on the title row
+    // (inside the PageHeader, over GitHub's hidden buttons).
+    const inline = !p.barActs && p.acts?.closest('[class*="prc-PageHeader-PageHeader-"]');
+    const host = p.barActs || inline;
+    const active = !!(settings.enabled && (isPullPage() || /\/pull\/\d+\/(changes|files|commits|checks)/.test(location.pathname)) && host);
     root.toggleAttribute("data-gr-actions-menu", active);
+    root.toggleAttribute("data-gr-actions-inline", active && !p.barActs);
     // All PR tabs use the full width (Files changed pattern): no centered 1356px box.
     root.toggleAttribute("data-gr-fullpage", active);
     root.toggleAttribute("data-gr-pr-done", /^(merged|closed|mesclado|fechado)$/i.test(document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || ""));
@@ -446,7 +454,7 @@
     // it overlays the content). Until then, its buttons move down to the title row.
     const wide = innerWidth >= 768;
     // Desktop: bar only appears on scroll. Mobile: bar always visible (without repeating the title while it is in view).
-    const one = active && !!title && title.getBoundingClientRect().bottom > (wide ? 56 : p.bar.getBoundingClientRect().bottom + 4);
+    const one = active && !!p.bar && !!title && title.getBoundingClientRect().bottom > (wide ? 56 : p.bar.getBoundingClientRect().bottom + 4);
     root.toggleAttribute("data-gr-one-header", one);
     let btn = document.querySelector(".gr-am-btn");
     if (!active) { btn?.remove(); closeActionsMenu(); if (p.acts) p.acts.style.transform = ""; if (p.barActs) p.barActs.style.transform = ""; return; }
@@ -457,7 +465,7 @@
       btn.setAttribute("aria-haspopup", "menu");
       btn.addEventListener("click", (e) => { e.stopPropagation(); openActionsMenu(btn); });
     }
-    if (btn.parentElement !== p.barActs) p.barActs.append(btn);
+    if (btn.parentElement !== host) host.append(btn);
     // Sticky bar with the same margins as the header/content (full width): GitHub
     // centers it in its own box, which does not line up with the content.
     const phEl = title?.closest('[class*="prc-PageHeader-PageHeader-"]');
@@ -466,7 +474,7 @@
       root.style.setProperty("--gr-pad-l", `${Math.max(0, Math.round(r.left - 8))}px`);
       root.style.setProperty("--gr-pad-r", `${Math.max(0, Math.round(document.documentElement.clientWidth - r.right))}px`);
     }
-    p.barActs.style.transform = "";
+    if (p.barActs) p.barActs.style.transform = "";
     if (one && wide) {
       const t = title.getBoundingClientRect(), a = p.barActs.getBoundingClientRect();
       const line = title.querySelector("h1, h2") || title;
@@ -535,8 +543,14 @@
     const node = textNodes(scope, STATUS_TEXT).find((n) => !n.parentElement.closest("nav, [role='tablist'], #gr-cockpit"));
     const body = descBody();
     let el = node?.parentElement;
-    // Classic page (Conversation tab): the merge box has a fixed id.
-    if (!el) return markOnly("data-gr-mergebox", document.querySelector("#partial-pull-merging"));
+    // Classic page (Conversation tab): the merge box has a fixed id / test id, at the end
+    // of the timeline. Only on open PRs: once merged or closed it is GitHub's own
+    // "merged" card (restore/delete branch), which stays visible.
+    if (!el) {
+      const st = document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || "open";
+      return markOnly("data-gr-mergebox", /^(merged|closed|mesclado|fechado)$/i.test(st) ? null
+        : document.querySelector("#partial-pull-merging, [data-testid='mergebox-partial']"));
+    }
     if (!body) return markOnly("data-gr-mergebox", null);
     while (el.parentElement && el.parentElement !== scope && !el.parentElement.contains(body)) el = el.parentElement;
     markOnly("data-gr-mergebox", el);
@@ -560,12 +574,11 @@
   // for anyone who wants to go back to the old one.
   function tagPreviewToggle() {
     const node = textNodes(document.querySelector("main") || document.body, PREVIEW_TEXT)
-      .find((n) => n.parentElement.closest("button, summary, [role='button']"));
+      // Not the Write | Preview tab of a comment box (classic Conversation tab).
+      .find((n) => n.parentElement.closest("button, summary, [role='button']") && !n.parentElement.closest("form, [role='tablist'], [role='tab'], .js-previewable-comment-form"));
     const btn = node?.parentElement.closest("button, summary, [role='button']");
-    if (btn) {
-      markOnly("data-gr-preview-toggle", btn);
-      if (!btn.title) btn.title = "Open to switch back to the classic pull request page";
-    }
+    markOnly("data-gr-preview-toggle", btn || null);
+    if (btn && !btn.title) btn.title = "Open to switch back to the classic pull request page";
   }
 
   // Description table of contents: a floating button (our node, outside the React tree)

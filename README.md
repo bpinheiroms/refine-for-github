@@ -8,8 +8,7 @@ A Chrome and Firefox extension (Manifest V3) that adds a design layer on top of 
 
 | Area | What it does |
 | --- | --- |
-| Pull request Overview | "N things left before merging": failing checks, missing approvals, conflicts and unresolved conversations, each with its action. GitHub's own merge buttons stay at the bottom. |
-| Side panel | Open, Resolved, Comments and Details tabs. Open conversations show who replied last. Details shows GitHub's sidebar (reviewers, labels…), still editable. |
+| Side panel | Open, Resolved, Comments and Details tabs, on the new Overview and on the classic Conversation tab. Comments has a full comment box (Write/Preview, formatting, attachments). Open conversations show who replied last. Details shows GitHub's sidebar (reviewers, labels…), still editable. |
 | Conversation drawer | Click a conversation to read it in a right-side drawer, reply (⌘↵) or reply and resolve. |
 | Header | Title, state, branches and net lines (`+N net`) on one row; Preview, Code, notifications and panel toggles grouped in one Actions menu; the sticky bar only appears on scroll. |
 | Merge status and checks | Checks grouped by state with colored markers, reviewers expanded, repeated messages removed. Merge status, Comments, Activity and check details open as right-side drawers. |

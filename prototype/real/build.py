@@ -36,6 +36,11 @@ def build(owner, repo, number, saved=None):
         html = subprocess.run(["curl", "-sL", "-A", UA, f"https://github.com/{owner}/{repo}/pull/{number}"],
                               check=True, capture_output=True, text=True).stdout
     html = re.sub(r"<script\b[^>]*>.*?</script>", "", html, flags=re.S)  # rendered HTML only
+    if saved:  # saved with the extension on: drop its nodes and tags, the bench re-runs it
+        html = re.sub(r'<(aside|section) id="gr-(panel|cockpit)".*?</\1>', "", html, flags=re.S)
+        html = re.sub(r'<(button|span) [^>]*class="gr-(copy-link|net|am-btn|pr-num)".*?</\1>', "", html, flags=re.S)
+        html = re.sub(r'\sdata-gr-[\w-]+(="[^"]*")?', "", html)
+        html = re.sub(r'<link rel="stylesheet" href="chrome-extension://[^"]*">', "", html)
     html = html.replace("</head>", STUB + "</head>", 1)
     out = here / owner / repo / "pull" / str(number)
     out.mkdir(parents=True, exist_ok=True)
