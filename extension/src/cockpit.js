@@ -79,8 +79,9 @@ const GRCockpit = (() => {
         .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
         .then((html) => {
           const body = t.querySelector("[data-target='review-thread-collapsible.body']") || t;
-          // DOMParser: inert document (no scripts run), and no innerHTML.
-          const doc = new DOMParser().parseFromString(html, "text/html");
+          // DOMParser: inert document (no scripts run), and no innerHTML. The leading <body> keeps
+          // a fragment that starts with <template>/<style>/<link> in the body instead of the head.
+          const doc = new DOMParser().parseFromString(`<body>${html}`, "text/html");
           doc.querySelectorAll("script").forEach((n) => n.remove());
           // GitHub's HTML has no inline handlers (CSP); drop any so nothing runs on insert.
           doc.querySelectorAll("*").forEach((n) => [...n.attributes].forEach((a) => /^on/i.test(a.name) && n.removeAttribute(a.name)));
