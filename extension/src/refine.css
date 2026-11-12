@@ -117,6 +117,12 @@ html[data-gr-cards] [data-gr-row]:hover {
   box-shadow: var(--gr-shadow-hover);
   transform: translateY(-1px);
 }
+/* A row that holds an open dialog (merge queue: "Queue entry status details" lives
+   inside its row): no lift, no clipping. Otherwise hovering the dialog toggles the
+   row's transform, which moves/clips the dialog positioned inside it. */
+html[data-gr-cards] [data-gr-row]:has(dialog[open], [data-gr-drawer]) {
+  transform: none !important; overflow: visible !important; transition: none !important; box-shadow: none !important;
+}
 
 /* State stripe on the left */
 html[data-gr-cards] [data-gr-row]::before {

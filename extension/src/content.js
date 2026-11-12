@@ -707,6 +707,22 @@
     }
   }
 
+  // Drawer dialogs close on a click outside them (GitHub's dialogs only close from their
+  // own button; centered, that was fine, as a side drawer the page invites the click).
+  document.addEventListener("mousedown", (e) => {
+    const d = [...document.querySelectorAll("[data-gr-drawer]")].find((x) => x.matches("dialog") ? x.open : x.offsetParent !== null || getComputedStyle(x).position === "fixed");
+    if (!d || e.button !== 0) return;
+    const r = d.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    // Menus and tooltips opened from the drawer live outside it (top layer / portals).
+    if (inside || e.target.closest?.("[role='menu'], [role='listbox'], [popover]:not([data-gr-drawer]), #__primerPortalRoot__")) return;
+    const close = d.querySelector("[data-close-dialog-id], button[aria-label='Close'], button[aria-label='Close dialog']");
+    close?.click();
+    // GitHub's button normally closes it; if it is still open right after, close the <dialog> itself.
+    setTimeout(() => { if (d.matches("dialog") && d.open) d.close(); }, 60);
+    e.preventDefault();
+  }, true);
+
   // Merge status panel: tag each check group's type (marker color) and
   // the "Merging is blocked" message that only repeats what another section already said.
   const CHECK_KIND = [[/fail|error|cancel/i, "fail"], [/pending|expected|queued|waiting/i, "pending"], [/in progress|running/i, "progress"],
