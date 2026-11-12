@@ -81,8 +81,10 @@
   // ---------- 2. Semantic tagging ----------
 
   const PR_HREF = /\/[^/]+\/[^/]+\/(pull|issues)\/\d+\/?$/;
-  const BOT_AUTHOR = /(dependabot|renovate|github-actions|\[bot\])/i;
-  const BOT_TITLE = /^(build|chore|fix)\(deps(-dev)?\)|^bump\s/i;
+  // "Dependency updates" group: PRs from the dependency bots, or anything titled like
+  // a dependency bump. Other bots (release, sync, AI agents) are ordinary PRs.
+  const BOT_AUTHOR = /(dependabot|renovate)/i;
+  const BOT_TITLE = /^(build|chore|fix)\(deps(-dev)?\)|^bump\s|^update (dependency|module|[\w@./-]+ to v?\d)|^lock file maintenance/i;
 
   function rowStateOf(row) {
     const has = (sel) => row.querySelector(sel) !== null;
