@@ -1,6 +1,6 @@
 # Refine for GitHub
 
-A Chrome extension (Manifest V3) that adds a design layer on top of GitHub, focused on the pull request page: what is left before merging, conversations in a side panel, readable checks and compact lists. It only reads the page you have open: no API, no token, no analytics.
+A Chrome and Firefox extension (Manifest V3) that adds a design layer on top of GitHub, focused on the pull request page: what is left before merging, conversations in a side panel, readable checks and compact lists. It only reads the page you have open: no API, no token, no analytics.
 
 ![Refine for GitHub](store/illustration.png)
 
@@ -95,6 +95,6 @@ For the logged-in React UI, save the rendered DOM from the browser and pass the 
 
 - Vulnerabilities: see [`SECURITY.md`](SECURITY.md) (private reporting through the Security tab).
 - `main` is protected: changes land only through squash-merged pull requests, with linear history and the `check` CI job passing.
-- The code is public for reading and auditing. There is no license file, so all rights are reserved by the author.
+- Licensed under the [MIT License](LICENSE).
 
 Refine for GitHub is an independent project and is not affiliated with, endorsed by or sponsored by GitHub, Inc.
