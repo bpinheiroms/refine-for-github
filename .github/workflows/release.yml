@@ -1,0 +1,60 @@
+name: Release
+
+# When main gets a manifest version that has no release yet, builds the
+# Chrome and Firefox packages and publishes them as GitHub release v<version>.
+# Merges that don't bump the version do nothing.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Version
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version extension/manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "v$version already released, nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.v.outputs.exists != 'true'
+        with:
+          node-version: 22
+      - name: Package
+        if: steps.v.outputs.exists != 'true'
+        run: ./scripts/package.sh
+      - name: Lint Firefox package
+        if: steps.v.outputs.exists != 'true'
+        run: npx --yes web-ext@10.8.0 lint --source-dir dist/firefox --warnings-as-errors
+      - name: Publish release
+        if: steps.v.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --generate-notes \
+            "dist/refine-for-github-$VERSION-chrome.zip" \
+            "dist/refine-for-github-$VERSION-firefox.zip"

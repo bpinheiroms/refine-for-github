@@ -26,4 +26,4 @@ Refine for GitHub is a browser extension that changes how github.com pages look.
 
 ## Contact
 
-Questions about this policy: open an issue on the project's repository or contact the developer through the Chrome Web Store listing.
+Questions about this policy: open an issue on the project's repository or contact the developer through the Chrome Web Store or Firefox Add-ons listing.

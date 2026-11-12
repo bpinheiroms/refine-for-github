@@ -79,11 +79,15 @@ const GRCockpit = (() => {
         .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
         .then((html) => {
           const body = t.querySelector("[data-target='review-thread-collapsible.body']") || t;
-          const tpl = document.createElement("template");
-          tpl.innerHTML = html;
-          tpl.content.querySelectorAll("script").forEach((n) => n.remove());
+          // DOMParser: inert document (no scripts run), and no innerHTML.
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          doc.querySelectorAll("script").forEach((n) => n.remove());
+          // GitHub's HTML has no inline handlers (CSP); drop any so nothing runs on insert.
+          doc.querySelectorAll("*").forEach((n) => [...n.attributes].forEach((a) => /^on/i.test(a.name) && n.removeAttribute(a.name)));
+          const frag = document.createDocumentFragment();
+          frag.append(...doc.body.childNodes);
           const slot = body.querySelector("include-fragment");
-          if (slot) slot.replaceWith(tpl.content); else body.append(tpl.content);
+          if (slot) slot.replaceWith(frag); else body.append(frag);
         })
         .catch(() => {});
     }

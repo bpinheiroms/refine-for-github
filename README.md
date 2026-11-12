@@ -27,13 +27,27 @@ A Chrome extension (Manifest V3) that adds a design layer on top of GitHub, focu
 
 After editing the code, click ⟳ on the extension in `chrome://extensions` and reload the tab. The loaded version is visible in the console with `document.documentElement.dataset.grVersion`.
 
-## Publish to the Chrome Web Store
+## Releases
 
-1. `./scripts/package.sh` builds `dist/refine-for-github-<version>.zip` (only the `extension/` folder).
-2. Upload the zip in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole).
-3. Fill in the listing with the text and images from [`store/LISTING.md`](store/LISTING.md).
-4. The privacy policy ([`PRIVACY.md`](PRIVACY.md)) is published at https://gist.github.com/bpinheiroms/8629584043c4948f0b6706369979874a.
-5. For every new release, bump `version` in `extension/manifest.json` and build the zip again.
+Bump `version` in `extension/manifest.json` in a pull request. When it is merged into `main`, the [Release workflow](.github/workflows/release.yml) builds both packages and publishes them as GitHub release `v<version>`:
+
+- `refine-for-github-<version>-chrome.zip` for the Chrome Web Store
+- `refine-for-github-<version>-firefox.zip` for addons.mozilla.org
+
+Merges that don't change the version don't create a release. To build locally, run `./scripts/package.sh` (output in `dist/`; `dist/firefox/` is the unpacked Firefox build, which you can load in `about:debugging` → **This Firefox** → **Load Temporary Add-on…**).
+
+### Chrome Web Store
+
+1. Download the Chrome zip from the release and upload it in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole) (**Package → Upload new package**, then **Submit for review**).
+2. The listing text and images are in [`store/LISTING.md`](store/LISTING.md).
+3. The privacy policy ([`PRIVACY.md`](PRIVACY.md)) is published at https://gist.github.com/bpinheiroms/8629584043c4948f0b6706369979874a.
+
+### Firefox Add-ons
+
+1. Download the Firefox zip from the release and upload it in the [Developer Hub](https://addons.mozilla.org/developers/) (first time: **Submit a New Add-on**, "On this site"; after that: **Upload New Version**).
+2. Source code is not needed: the package is not minified or bundled.
+3. The add-on id is `refine-for-github@bpinheiroms` (set in `scripts/package.sh`). It must never change, or Firefox treats it as a different add-on.
+4. The same listing text from [`store/LISTING.md`](store/LISTING.md) works; the extension declares that it collects no data.
 
 ## How the page is changed
 

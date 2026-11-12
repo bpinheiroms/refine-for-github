@@ -5,7 +5,7 @@ Everything to paste into the Chrome Web Store Developer Dashboard
 
 ## Package
 
-- Upload: `dist/refine-for-github-<version>.zip` (run `./scripts/package.sh`)
+- Upload: `refine-for-github-<version>-chrome.zip` from the GitHub release `v<version>` (or `./scripts/package.sh` locally). The `-firefox.zip` from the same release goes to addons.mozilla.org.
 - Version: see `extension/manifest.json`
 
 ## Store listing tab
