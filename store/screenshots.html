@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Refine for GitHub — store screenshots</title>
+<style>
+  /* Chrome Web Store screenshots (1280×800). Open with ?s=1 … ?s=4 to render each one.
+     Illustrations based on the real extension, with sample data. */
+  :root {
+    --bg: #0b0e14; --panel: #12161f; --card: #171c27; --card2: #1d2331; --line: #262d3b; --mut: #8a93a6; --fg: #e8ecf3;
+    --acc: #8b7cf6; --acc2: #6d5df0; --ok: #3fb950; --warn: #e3b341; --bad: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    width: 1280px; height: 800px; overflow: hidden; color: var(--fg);
+    font: 14px/1.4 "Inter", -apple-system, "SF Pro Text", system-ui, sans-serif;
+    background:
+      radial-gradient(800px 420px at 90% -10%, rgba(139,124,246,.38), transparent 60%),
+      radial-gradient(600px 420px at -5% 110%, rgba(91,157,255,.18), transparent 60%),
+      var(--bg);
+  }
+  .scene { display: none; position: relative; width: 1280px; height: 800px; }
+  .scene.on { display: block; }
+  .cap { position: absolute; left: 64px; top: 44px; right: 64px; }
+  .cap h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -.025em; }
+  .cap p { margin: 8px 0 0; font-size: 17px; color: var(--mut); }
+  .win {
+    position: absolute; left: 64px; right: 64px; top: 156px; bottom: 32px; border-radius: 18px; background: var(--panel);
+    border: 1px solid var(--line); box-shadow: 0 30px 90px rgba(0,0,0,.55); overflow: hidden; display: flex; flex-direction: column;
+  }
+  .chrome { height: 38px; flex: none; display: flex; align-items: center; gap: 7px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+  .chrome i { width: 11px; height: 11px; border-radius: 50%; background: #2a3140; }
+  .chrome .url { margin-left: 14px; height: 22px; width: 360px; border-radius: 7px; background: #0e121a; }
+  .head { padding: 20px 28px 0; display: flex; align-items: flex-start; gap: 14px; flex: none; }
+  .title { font-size: 22px; font-weight: 650; letter-spacing: -.02em; }
+  .num { color: var(--mut); font-weight: 500; }
+  .meta { display: flex; gap: 9px; align-items: center; margin-top: 8px; color: var(--mut); font-size: 12.5px; }
+  code { font: 12px ui-monospace, Menlo, monospace; background: #1b2130; padding: 1px 6px; border-radius: 5px; color: #c9d1e0; }
+  .pill { padding: 1px 9px; border-radius: 999px; font-weight: 600; font-size: 11.5px; }
+  .open { color: var(--ok); background: rgba(63,185,80,.14); border: 1px solid rgba(63,185,80,.35); }
+  .net { color: var(--warn); background: rgba(227,179,65,.12); font-family: ui-monospace, Menlo, monospace; }
+  .acts { margin-left: auto; display: flex; gap: 7px; }
+  .btn { height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--fg); white-space: nowrap; }
+  .btn.pri { background: var(--acc2); border-color: transparent; }
+  .tabs { display: flex; gap: 22px; padding: 14px 28px 0; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--mut); flex: none; }
+  .tabs span { padding-bottom: 10px; } .tabs .on { color: var(--fg); font-weight: 600; box-shadow: inset 0 -2px 0 var(--acc); }
+  .tabs .c { margin-left: 5px; padding: 0 6px; border-radius: 999px; background: #232a39; font-size: 11px; }
+  .body { flex: 1; display: grid; grid-template-columns: 1fr 380px; gap: 22px; padding: 20px 28px; min-height: 0; }
+  h2 { margin: 0 0 12px; font-size: 17px; letter-spacing: -.01em; }
+  .box { border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: 0; }
+  .ic { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; }
+  .ic.bad { background: rgba(248,81,73,.16); color: var(--bad); }
+  .ic.warn { background: rgba(227,179,65,.16); color: var(--warn); }
+  .ic.ok { background: rgba(63,185,80,.16); color: var(--ok); }
+  .row b { display: block; font-size: 14px; } .row small { color: var(--mut); font-size: 12.5px; }
+  .row .btn { margin-left: auto; height: 28px; font-size: 12px; }
+  .merge { background: #10141c; color: var(--mut); font-size: 12.5px; }
+  .desc { margin-top: 16px; padding: 16px 18px; }
+  .line { height: 9px; border-radius: 5px; background: #222a38; margin: 9px 0; }
+  .side { display: flex; flex-direction: column; gap: 9px; min-height: 0; }
+  .seg { display: flex; padding: 4px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-size: 12.5px; color: var(--mut); }
+  .seg span { flex: 1; text-align: center; padding: 6px 0; border-radius: 9px; white-space: nowrap; }
+  .seg .on { background: #232a39; color: var(--fg); font-weight: 600; }
+  .n { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 5px; border-radius: 999px; background: #262d3b; font-size: 11px; }
+  .seg .on .n { background: var(--warn); color: #1b1300; font-weight: 700; }
+  .th { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 11px 14px; }
+  .loc { font: 11.5px ui-monospace, Menlo, monospace; color: var(--mut); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .tag { font: 600 10.5px -apple-system, system-ui, sans-serif; color: var(--warn); border: 1px solid rgba(227,179,65,.45); border-radius: 999px; padding: 0 7px; }
+  .th p { margin: 5px 0 7px; font-size: 13px; }
+  .who { display: flex; align-items: center; gap: 7px; color: var(--mut); font-size: 12px; }
+  .av { width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #5b9dff, #8b7cf6); flex: none; }
+  .av.b { background: linear-gradient(135deg, #f78166, #e3b341); } .av.c { background: linear-gradient(135deg, #3fb950, #5b9dff); }
+  .rep { margin-left: auto; color: var(--acc); background: rgba(139,124,246,.16); border-radius: 999px; padding: 0 9px; font-weight: 600; }
+  /* right drawer */
+  .dim { position: absolute; inset: 38px 0 0 0; background: rgba(4,6,10,.45); }
+  .drawer { position: absolute; top: 38px; right: 0; bottom: 0; width: 470px; background: #141924; border-left: 1px solid #323a4c; box-shadow: -20px 0 60px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+  .dh { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); font-weight: 650; }
+  .dh .x { color: var(--mut); font-weight: 400; font-size: 18px; }
+  .db { flex: 1; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .diff { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; font: 12px/1.7 ui-monospace, Menlo, monospace; }
+  .diff .hd { background: #1a2030; color: var(--mut); padding: 6px 12px; display: flex; justify-content: space-between; }
+  .diff div.l { padding: 0 12px; color: #c4cbd8; white-space: pre; }
+  .diff .add { background: rgba(63,185,80,.13); }
+  .msg { display: flex; gap: 10px; }
+  .msg .av { width: 26px; height: 26px; margin-top: 2px; }
+  .bub { flex: 1; background: var(--card2); border-radius: 12px; padding: 9px 12px; font-size: 13px; color: #d5dbe6; }
+  .bub b { color: var(--fg); } .bub .t { color: var(--mut); font-size: 11.5px; margin-left: 6px; }
+  .compose { flex: none; padding: 14px 18px 18px; border-top: 1px solid var(--line); }
+  .ta { height: 66px; border-radius: 10px; border: 1.5px solid var(--acc); background: #10141c; padding: 10px 12px; color: var(--mut); font-size: 13px; }
+  .send { margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px; }
+  /* merge status */
+  .sec { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; }
+  .sec b { display: block; font-size: 14px; } .sec small { color: var(--mut); font-size: 12px; }
+  .grp { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 500; }
+  .grp:hover, .grp.hl { background: #1c2230; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .grp .chev { margin-left: auto; color: var(--mut); }
+  .chk { display: flex; align-items: center; gap: 10px; padding: 7px 10px 7px 28px; font-size: 12.5px; }
+  .chk .s { color: var(--mut); }
+  .req { margin-left: auto; font-size: 10.5px; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; color: var(--mut); }
+  .people { padding: 2px 10px 8px 40px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+  .people span { display: flex; align-items: center; gap: 8px; }
+  /* lists */
+  .list { padding: 18px 28px; display: flex; flex-direction: column; gap: 7px; }
+  .filters { display: flex; align-items: center; gap: 8px; padding: 12px 28px 0; }
+  .search { flex: 1; height: 32px; border-radius: 9px; border: 1px solid var(--line); background: #0e121a; color: var(--mut); font: 12.5px ui-monospace, Menlo, monospace; display: flex; align-items: center; padding: 0 12px; }
+  .search em { font-style: normal; color: var(--acc); }
+  .st { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 8px; color: var(--mut); font-size: 13px; }
+  .st.sel { background: #232a39; color: var(--fg); font-weight: 600; box-shadow: inset 0 -2px 0 var(--acc); }
+  .st .n { margin: 0; } .st.sel .n { background: rgba(139,124,246,.2); color: var(--acc); }
+  .pr { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); box-shadow: inset 3px 0 0 var(--ok); }
+  .pr .t { font-weight: 600; font-size: 13.5px; } .pr .m { color: var(--mut); font-size: 12px; }
+  .pr .r { margin-left: auto; display: flex; gap: 14px; color: var(--mut); font-size: 12px; align-items: center; }
+  .grpbtn { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border: 1px dashed var(--line); border-radius: 11px; color: var(--mut); font-weight: 500; font-size: 13px; }
+  .gi { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; }
+  .gi.d { background: #232a39; } .gi.b { background: rgba(91,157,255,.16); color: #5b9dff; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+
+<!-- 1. Overview -->
+<section class="scene" data-s="1">
+  <div class="cap"><h1>What's left to merge, at a glance</h1><p>Failing checks, approvals, conflicts and open conversations, each with its next step.</p></div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span class="url"></span></div>
+    <div class="head">
+      <div>
+        <div class="title">feat(auth): sign in with a passkey <span class="num">#128</span></div>
+        <div class="meta"><span class="pill open">Open</span> octocat wants to merge into <code>main</code> <span class="ok">+412</span><span class="bad">−37</span><span class="pill net">+375 net</span></div>
+      </div>
+      <div class="acts"><span class="btn">Merge status</span><span class="btn pri">Submit review</span><span class="btn">Actions ▾</span></div>
+    </div>
+    <div class="tabs"><span class="on">Overview</span><span>Commits<span class="c">6</span></span><span>Checks<span class="c">18</span></span><span>Files changed<span class="c">14</span></span></div>
+    <div class="body">
+      <div>
+        <h2>3 things left before merging</h2>
+        <div class="box">
+          <div class="row"><span class="ic bad">✕</span><div><b>2 checks failing</b><small>e2e (chromium) · lint — Required</small></div><span class="btn">Details</span></div>
+          <div class="row"><span class="ic warn">!</span><div><b>2 open conversations</b><small>Someone replied to you in one of them</small></div><span class="btn">Open</span></div>
+          <div class="row"><span class="ic warn">○</span><div><b>No approvals yet</b><small>1 review requested</small></div><span class="btn">Review</span></div>
+          <div class="row merge"><span>Merge</span><span class="btn" style="margin-left:auto">Merge when ready</span></div>
+        </div>
+        <div class="box desc"><b>Summary</b><div class="line" style="width:92%"></div><div class="line" style="width:78%"></div><div class="line" style="width:60%"></div></div>
+      </div>
+      <div class="side">
+        <div class="seg"><span class="on">Open<span class="n">2</span></span><span>Resolved<span class="n">5</span></span><span>Comments<span class="n">3</span></span><span>Details</span></div>
+        <div class="th"><div class="loc">src/auth/passkey.ts:42 <span class="tag">Outdated</span></div><p>Handle the case where the browser has no authenticator.</p><div class="who"><span class="av"></span>you · 2h <span class="rep">↩ mona replied</span></div></div>
+        <div class="th"><div class="loc">src/routes/login.tsx:118</div><p>Can we keep the password form as a fallback?</p><div class="who"><span class="av"></span>you · 5h</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Conversation drawer -->
+<section class="scene" data-s="2">
+  <div class="cap"><h1>Read and reply without losing your place</h1><p>Conversations open in a side drawer. Reply, or reply and resolve, in one step.</p></div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span class="url"></span></div>
+    <div class="head"><div><div class="title">feat(auth): sign in with a passkey <span class="num">#128</span></div><div class="meta"><span class="pill open">Open</span> octocat wants to merge into <code>main</code></div></div></div>
+    <div class="tabs"><span class="on">Overview</span><span>Commits<span class="c">6</span></span><span>Checks<span class="c">18</span></span><span>Files changed<span class="c">14</span></span></div>
+    <div class="body"><div><h2>3 things left before merging</h2><div class="box"><div class="row"><span class="ic bad">✕</span><div><b>2 checks failing</b></div></div><div class="row"><span class="ic warn">!</span><div><b>2 open conversations</b></div></div><div class="row"><span class="ic warn">○</span><div><b>No approvals yet</b></div></div></div></div><div></div></div>
+    <div class="dim"></div>
+    <div class="drawer">
+      <div class="dh">Code conversation <span class="x">✕</span></div>
+      <div class="db">
+        <div class="diff">
+          <div class="hd"><span>src/auth/passkey.ts</span><span>line 42</span></div>
+          <div class="l">  const cred = await navigator.credentials.get({</div>
+          <div class="l add">+   publicKey: options,</div>
+          <div class="l add">+   mediation: "conditional",</div>
+          <div class="l">  });</div>
+        </div>
+        <div class="msg"><span class="av"></span><div class="bub"><b>you</b><span class="t">2h</span><br>Handle the case where the browser has no authenticator.</div></div>
+        <div class="msg"><span class="av b"></span><div class="bub"><b>mona</b><span class="t">35m</span><br>Added a fallback to the password form and a test for it. Can you take another look?</div></div>
+      </div>
+      <div class="compose">
+        <div class="ta">Looks good, thanks!</div>
+        <div class="send"><span class="btn">Reply and resolve</span><span class="btn pri">Reply ⌘↵</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Merge status -->
+<section class="scene" data-s="3">
+  <div class="cap"><h1>Merge status you can scan</h1><p>Checks grouped by state, reviewers listed, the same right-side drawer everywhere.</p></div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span class="url"></span></div>
+    <div class="head"><div><div class="title">feat(auth): sign in with a passkey <span class="num">#128</span></div><div class="meta"><span class="pill open">Open</span> octocat wants to merge into <code>main</code></div></div></div>
+    <div class="tabs"><span class="on">Overview</span><span>Commits<span class="c">6</span></span><span>Checks<span class="c">18</span></span><span>Files changed<span class="c">14</span></span></div>
+    <div class="body"><div><h2>2 things left before merging</h2><div class="box"><div class="row"><span class="ic bad">✕</span><div><b>1 check failing</b></div></div><div class="row"><span class="ic warn">!</span><div><b>2 open conversations</b></div></div></div></div><div></div></div>
+    <div class="dim"></div>
+    <div class="drawer">
+      <div class="dh">Merge status <span class="x">✕</span></div>
+      <div class="sec"><span class="ic ok">✓</span><div><b>Changes approved</b><small>1 approving review by reviewers with write access.</small></div></div>
+      <div style="padding:6px 8px; border-bottom:1px solid var(--line)">
+        <div class="grp"><span class="ok">✓</span> 1 approval <span class="chev">⌄</span></div>
+        <div class="people"><span><i class="av b"></i>mona</span></div>
+        <div class="grp"><span style="color:var(--mut)">◌</span> 1 pending review <span class="chev">⌄</span></div>
+        <div class="people"><span><i class="av c"></i>hubot</span></div>
+      </div>
+      <div class="sec"><span class="ic warn">◔</span><div><b>Some checks haven't completed yet</b><small>1 failing, 2 pending, 1 in progress, 2 skipped, 16 successful</small></div></div>
+      <div style="padding:6px 8px">
+        <div class="grp hl"><span class="dot" style="background:var(--bad)"></span>1 failing check <span class="chev">⌄</span></div>
+        <div class="chk"><span class="bad">✕</span> e2e (chromium) <span class="s">Failing after 4m</span><span class="req">Required</span></div>
+        <div class="grp"><span class="dot" style="background:var(--warn)"></span>2 pending checks <span class="chev">›</span></div>
+        <div class="grp"><span class="dot" style="background:var(--acc); box-shadow:0 0 0 3px rgba(139,124,246,.25)"></span>1 in progress check <span class="chev">›</span></div>
+        <div class="grp"><span class="dot" style="background:var(--mut)"></span>2 skipped checks <span class="chev">›</span></div>
+        <div class="grp"><span class="dot" style="background:var(--ok)"></span>16 successful checks <span class="chev">›</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Lists -->
+<section class="scene" data-s="4">
+  <div class="cap"><h1>Cleaner pull request lists</h1><p>Cards with a state stripe. Drafts and dependency updates grouped at the end.</p></div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span class="url"></span></div>
+    <div class="filters">
+      <span class="st sel">Open <span class="n">12</span></span><span class="st">Closed <span class="n">412</span></span>
+      <span class="search" style="margin-left:12px">is:<em>pr</em>&nbsp;state:<em>open</em></span>
+    </div>
+    <div class="list">
+      <div class="pr"><span class="ok">⇄</span><div><div class="t">feat(auth): sign in with a passkey</div><div class="m">#128 · octocat · updated 2h ago</div></div><div class="r"><span class="bad">✕ 16/18</span><span>💬 4</span></div></div>
+      <div class="pr"><span class="ok">⇄</span><div><div class="t">fix(api): retry the upload when storage returns 503</div><div class="m">#127 · mona · updated 5h ago</div></div><div class="r"><span class="ok">✓ 18/18</span><span>💬 2</span></div></div>
+      <div class="pr"><span class="ok">⇄</span><div><div class="t">perf(search): debounce the query input</div><div class="m">#125 · hubot · updated yesterday</div></div><div class="r"><span class="ok">✓ 18/18</span><span>💬 7</span></div></div>
+      <div class="pr"><span class="ok">⇄</span><div><div class="t">refactor(ui): extract the toast component</div><div class="m">#123 · octocat · updated 2 days ago</div></div><div class="r"><span class="ok">✓ 18/18</span><span>💬 1</span></div></div>
+      <div class="pr"><span class="ok">⇄</span><div><div class="t">docs: explain the release process</div><div class="m">#121 · mona · updated 3 days ago</div></div><div class="r"><span class="ok">✓ 18/18</span><span>💬 0</span></div></div>
+      <div class="grpbtn"><span class="gi d">⋮</span>3 drafts<span style="margin-left:auto">›</span></div>
+      <div class="grpbtn"><span class="gi b">⚙</span>4 dependency updates<span style="margin-left:auto">›</span></div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const q = new URLSearchParams(location.search);
+  const s = q.get("s") || "1";
+  // ?zoom=2 renders at 2x (viewport 2560×1600) for a sharper capture, then scaled to 1280×800.
+  if (q.get("zoom")) document.documentElement.style.zoom = q.get("zoom");
+  document.querySelector(`.scene[data-s="${s}"]`).classList.add("on");
+</script>
+</body>
+</html>

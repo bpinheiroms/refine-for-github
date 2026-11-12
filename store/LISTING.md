@@ -52,10 +52,11 @@ PRIVATE BY DESIGN
 • No analytics, no tracking, no remote code. Your two settings (on/off and accent color) are stored with Chrome sync storage.
 ```
 
-**Screenshots** (1280×800): `store/screenshots/`
-1. `1-overview.png` — Overview with "things left before merging" and the side panel
-2. `2-conversation-drawer.png` — a code conversation opened in the drawer
-3. `3-files-changed.png` — Files changed with the unified header
+**Screenshots** (1280×800, illustrations with sample data; source in `store/screenshots.html`, render each with `?s=1…4&zoom=2` at a 2560×1600 viewport): `store/screenshots/`
+1. `1-overview.png` — "What's left to merge, at a glance"
+2. `2-conversation-drawer.png` — "Read and reply without losing your place"
+3. `3-merge-status.png` — "Merge status you can scan"
+4. `4-lists.png` — "Cleaner pull request lists"
 
 **Small promo tile** (440×280): `store/promo-small-440x280.png`
 **Marquee promo tile** (1400×560, optional): `store/promo-marquee-1400x560.png`
