@@ -29,12 +29,15 @@ After editing the code, click ⟳ on the extension in `chrome://extensions` and 
 
 ## Releases
 
-Bump `version` in `extension/manifest.json` in a pull request. When it is merged into `main`, the [Release workflow](.github/workflows/release.yml) builds both packages and publishes them as GitHub release `v<version>`:
+Releases are automatic. Never edit `version` in `extension/manifest.json` by hand.
 
-- `refine-for-github-<version>-chrome.zip` for the Chrome Web Store
-- `refine-for-github-<version>-firefox.zip` for addons.mozilla.org
+1. Pull request titles are [Conventional Commits](https://www.conventionalcommits.org/) (checked by the `PR title` workflow), because the squash commit on `main` uses the title.
+2. When a pull request is merged into `main`, the [Release workflow](.github/workflows/release.yml) reads the commits since the last tag and picks the next version: `feat` → minor, `fix`/`perf`/`revert` → patch, `!` → major. `docs`, `ci`, `chore`, `refactor`, `test`… release nothing.
+3. It writes the version into the manifest, commits `release: vX.Y.Z` to `main` and tags it (with the `RELEASE_DEPLOY_KEY` deploy key, which the `main` ruleset lets through), then publishes GitHub release `vX.Y.Z` with:
+   - `refine-for-github-X.Y.Z-chrome.zip` for the Chrome Web Store
+   - `refine-for-github-X.Y.Z-firefox.zip` for addons.mozilla.org
 
-Merges that don't change the version don't create a release. To build locally, run `./scripts/package.sh` (output in `dist/`; `dist/firefox/` is the unpacked Firefox build, which you can load in `about:debugging` → **This Firefox** → **Load Temporary Add-on…**).
+**Actions → Release → Run workflow** forces a bump (for example to ship a docs-only change) or does a dry run. To build locally, run `./scripts/package.sh` (output in `dist/`; `dist/firefox/` is the unpacked Firefox build, which you can load in `about:debugging` → **This Firefox** → **Load Temporary Add-on…**).
 
 ### Chrome Web Store
 

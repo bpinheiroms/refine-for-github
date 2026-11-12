@@ -1,0 +1,7 @@
+# Notes GitHub generates for each release: pull requests since the last tag, without bots.
+changelog:
+  exclude:
+    authors:
+      - dependabot
+      - dependabot[bot]
+      - github-actions[bot]
