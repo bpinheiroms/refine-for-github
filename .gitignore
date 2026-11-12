@@ -1,5 +1,5 @@
 .DS_Store
 dist/
-# Bancada: páginas salvas do GitHub (podem ter conteúdo de repositórios privados)
+# Test bench: saved GitHub pages (may contain content from private repositories)
 prototype/real/*/
 prototype/real/__ext

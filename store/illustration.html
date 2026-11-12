@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Refine for GitHub — illustration</title>
+<style>
+  /* Illustration for the README and store: a stylized, simplified pull request page.
+     Rendered to store/illustration.png (1600×900). */
+  :root {
+    --bg: #0b0e14; --panel: #12161f; --card: #171c27; --line: #262d3b; --mut: #8a93a6; --fg: #e8ecf3;
+    --acc: #8b7cf6; --acc2: #6d5df0; --ok: #3fb950; --warn: #e3b341; --bad: #f85149;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    width: 1600px; height: 900px; overflow: hidden; font: 15px/1.4 "Inter", -apple-system, "SF Pro Text", system-ui, sans-serif; color: var(--fg);
+    background:
+      radial-gradient(900px 500px at 85% -10%, rgba(139,124,246,.35), transparent 60%),
+      radial-gradient(700px 500px at -5% 110%, rgba(91,157,255,.18), transparent 60%),
+      var(--bg);
+    display: grid; place-items: center;
+  }
+  .win {
+    width: 1360px; height: 760px; border-radius: 22px; background: var(--panel); border: 1px solid var(--line);
+    box-shadow: 0 40px 120px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.03) inset; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .chrome { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+  .chrome i { width: 12px; height: 12px; border-radius: 50%; background: #2a3140; }
+  .chrome .url { margin-left: 18px; height: 24px; flex: 0 0 420px; border-radius: 8px; background: #0e121a; }
+  .head { padding: 26px 36px 0; display: flex; align-items: flex-start; gap: 16px; }
+  .title { font-size: 26px; font-weight: 650; letter-spacing: -.02em; }
+  .num { color: var(--mut); font-weight: 500; }
+  .meta { display: flex; gap: 10px; align-items: center; margin-top: 10px; color: var(--mut); font-size: 13px; }
+  .pill { padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; }
+  .open { color: var(--ok); background: rgba(63,185,80,.14); border: 1px solid rgba(63,185,80,.35); }
+  .net { color: var(--warn); background: rgba(227,179,65,.12); font-family: ui-monospace, Menlo, monospace; }
+  .acts { margin-left: auto; display: flex; gap: 8px; }
+  .btn { height: 34px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; color: var(--fg); }
+  .btn.pri { background: var(--acc2); border-color: transparent; }
+  .tabs { display: flex; gap: 26px; padding: 18px 36px 0; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--mut); }
+  .tabs span { padding-bottom: 12px; } .tabs .on { color: var(--fg); font-weight: 600; box-shadow: inset 0 -2px 0 var(--acc); }
+  .body { flex: 1; display: grid; grid-template-columns: 1fr 440px; gap: 28px; padding: 26px 36px; min-height: 0; }
+  h2 { margin: 0 0 14px; font-size: 19px; letter-spacing: -.01em; }
+  .box { border: 1px solid var(--line); border-radius: 16px; background: var(--card); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-top: 1px solid var(--line); }
+  .row:first-child { border-top: 0; }
+  .ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; flex: none; }
+  .ic.bad { background: rgba(248,81,73,.16); color: var(--bad); }
+  .ic.warn { background: rgba(227,179,65,.16); color: var(--warn); }
+  .ic.ok { background: rgba(63,185,80,.16); color: var(--ok); }
+  .row b { display: block; font-size: 15px; } .row small { color: var(--mut); font-size: 13px; }
+  .row .btn { margin-left: auto; height: 30px; font-size: 12.5px; }
+  .merge { background: #10141c; color: var(--mut); font-size: 13px; }
+  .desc { margin-top: 20px; padding: 18px 20px; }
+  .line { height: 10px; border-radius: 6px; background: #222a38; margin: 10px 0; }
+  .side { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .seg { display: flex; padding: 5px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); font-size: 13.5px; color: var(--mut); }
+  .seg span { flex: 1; text-align: center; padding: 7px 0; border-radius: 10px; }
+  .seg .on { background: #232a39; color: var(--fg); font-weight: 600; }
+  .n { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: #262d3b; font-size: 12px; }
+  .seg .on .n { background: var(--warn); color: #1b1300; font-weight: 700; }
+  .th { border: 1px solid var(--line); border-radius: 14px; background: var(--card); padding: 13px 16px; }
+  .loc { font: 12px ui-monospace, Menlo, monospace; color: var(--mut); display: flex; justify-content: space-between; align-items: center; }
+  .tag { font: 600 11px -apple-system, system-ui, sans-serif; color: var(--warn); border: 1px solid rgba(227,179,65,.45); border-radius: 999px; padding: 0 8px; }
+  .th p { margin: 6px 0 8px; font-size: 14px; }
+  .who { display: flex; align-items: center; gap: 8px; color: var(--mut); font-size: 12.5px; }
+  .av { width: 18px; height: 18px; border-radius: 50%; background: linear-gradient(135deg, #5b9dff, #8b7cf6); }
+  .rep { margin-left: auto; color: var(--acc); background: rgba(139,124,246,.16); border-radius: 999px; padding: 1px 10px; font-weight: 600; }
+  /* drawer peeking from the right */
+  .drawer {
+    position: absolute; right: 70px; top: 520px; width: 380px; padding: 18px; border-radius: 18px; background: #161b26; border: 1px solid #323a4c;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6); transform: rotate(-1deg);
+  }
+  .drawer h4 { margin: 0 0 12px; font-size: 14px; }
+  .bubble { background: #1d2331; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #cfd5e1; margin-bottom: 8px; }
+  .reply { margin-top: 12px; height: 54px; border-radius: 12px; border: 1.5px solid var(--acc); background: #12161f; }
+  .send { margin-top: 10px; display: flex; justify-content: flex-end; gap: 8px; }
+</style>
+</head>
+<body>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span class="url"></span></div>
+    <div class="head">
+      <div>
+        <div class="title">feat(auth): sign in with a passkey <span class="num">#128</span></div>
+        <div class="meta"><span class="pill open">Open</span> octocat wants to merge into <code>main</code> <span style="color:var(--ok)">+412</span><span style="color:var(--bad)">−37</span><span class="pill net">+375 net</span></div>
+      </div>
+      <div class="acts"><span class="btn">Merge status</span><span class="btn pri">Submit review</span><span class="btn">Actions ▾</span></div>
+    </div>
+    <div class="tabs"><span class="on">Overview</span><span>Commits 6</span><span>Checks 18</span><span>Files changed 14</span></div>
+    <div class="body">
+      <div>
+        <h2>3 things left before merging</h2>
+        <div class="box">
+          <div class="row"><span class="ic bad">✕</span><div><b>2 checks failing</b><small>e2e (chromium) · lint — Required</small></div><span class="btn">Details</span></div>
+          <div class="row"><span class="ic warn">!</span><div><b>2 open conversations</b><small>Someone replied to you in one of them</small></div><span class="btn">Open</span></div>
+          <div class="row"><span class="ic warn">○</span><div><b>No approvals yet</b><small>1 review requested</small></div><span class="btn">Review</span></div>
+          <div class="row merge"><span>Merge</span><span class="btn" style="margin-left:auto">Merge when ready</span></div>
+        </div>
+        <div class="box desc">
+          <b>Summary</b>
+          <div class="line" style="width:92%"></div><div class="line" style="width:78%"></div><div class="line" style="width:85%"></div><div class="line" style="width:40%"></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="seg"><span class="on">Open<span class="n">2</span></span><span>Resolved<span class="n">5</span></span><span>Comments<span class="n">3</span></span><span>Details</span></div>
+        <div class="th"><div class="loc">src/auth/passkey.ts:42 <span class="tag">Outdated</span></div><p>Handle the case where the browser has no authenticator.</p><div class="who"><span class="av"></span>you · 2h <span class="rep">↩ mona replied</span></div></div>
+        <div class="th"><div class="loc">src/routes/login.tsx:118</div><p>Can we keep the password form as a fallback?</p><div class="who"><span class="av"></span>you · 5h</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="drawer">
+    <h4>Code conversation · passkey.ts:42</h4>
+    <div class="bubble"><b>you</b> — Handle the case where the browser has no authenticator.</div>
+    <div class="bubble"><b>mona</b> — Added a fallback and a test, can you take another look?</div>
+    <div class="reply"></div>
+    <div class="send"><span class="btn">Resolve</span><span class="btn pri">Reply ⌘↵</span></div>
+  </div>
+</body>
+</html>

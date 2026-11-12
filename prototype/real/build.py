@@ -1,17 +1,17 @@
-"""Bancada de teste com o HTML real do GitHub.
+"""Test bench with real GitHub HTML.
 
-Baixa páginas de PR públicas, tira os scripts do GitHub (fica só o HTML que o
-servidor renderizou) e injeta a extensão inteira: refine.css, settings.js,
-cockpit.js e content.js. Nada de API: a extensão lê só a página.
+Downloads public pull request pages, strips GitHub's scripts (only the HTML the
+server rendered is kept) and injects the whole extension: refine.css,
+settings.js, cockpit.js and content.js. No API: the extension only reads the page.
 
     python3 prototype/real/build.py BridgLabs/opencodereview 104 101
     cd prototype/real && python3 -m http.server 8766
     → http://127.0.0.1:8766/BridgLabs/opencodereview/pull/104/
 
-A URL precisa ter o formato /dono/repo/pull/N porque é o que a extensão lê.
+The URL must look like /owner/repo/pull/N because that is what the extension reads.
 
-Página logada (Overview nova, renderizada pelo React): salve o DOM no navegador
-e passe o arquivo no lugar do número:
+Logged-in page (new Overview, rendered by React): save the DOM in the browser and
+pass the file instead of the number:
 
     python3 prototype/real/build.py BridgLabs/opencodereview ~/Downloads/pr-81.html
 """
@@ -35,12 +35,12 @@ def build(owner, repo, number, saved=None):
     else:
         html = subprocess.run(["curl", "-sL", "-A", UA, f"https://github.com/{owner}/{repo}/pull/{number}"],
                               check=True, capture_output=True, text=True).stdout
-    html = re.sub(r"<script\b[^>]*>.*?</script>", "", html, flags=re.S)  # só o HTML renderizado
+    html = re.sub(r"<script\b[^>]*>.*?</script>", "", html, flags=re.S)  # rendered HTML only
     html = html.replace("</head>", STUB + "</head>", 1)
     out = here / owner / repo / "pull" / str(number)
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(html)
-    # Conversas recolhidas: o GitHub baixa o conteúdo sob demanda; guardamos uma cópia local.
+    # Collapsed conversations: GitHub loads them on demand; keep a local copy.
     for tid in set(re.findall(rf"/{owner}/{repo}/pull/{number}/threads/(\d+)", html)):
         frag = subprocess.run(["curl", "-sL", "-A", UA, "-H", "Accept: text/html",
                                f"https://github.com/{owner}/{repo}/pull/{number}/threads/{tid}?rendering_on_files_tab=false"],
@@ -50,13 +50,13 @@ def build(owner, repo, number, saved=None):
     print(f"{owner}/{repo}#{number}: {len(html)//1024} KB")
 
 if __name__ == "__main__":
-    link = here / "__ext"  # aponta para extension/, então editar a extensão basta recarregar
+    link = here / "__ext"  # points to extension/, so editing the extension only needs a reload
     if not link.exists():
         link.symlink_to(ext, target_is_directory=True)
     owner, repo = sys.argv[1].split("/")
     for n in sys.argv[2:]:
         f = pathlib.Path(n).expanduser()
-        if f.is_file():  # DOM salvo do navegador: o número vem do nome (pr-81.html)
+        if f.is_file():  # DOM saved from the browser: the number comes from the file name (pr-81.html)
             build(owner, repo, int(re.search(r"(\d+)", f.stem).group(1)), f)
         else:
             build(owner, repo, int(n))

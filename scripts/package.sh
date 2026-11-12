@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gera o .zip para enviar à Chrome Web Store: dist/refine-for-github-<versão>.zip
+# Builds the .zip to upload to the Chrome Web Store: dist/refine-for-github-<version>.zip
 set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$(python3 -c "import json;print(json.load(open('extension/manifest.json'))['version'])")
