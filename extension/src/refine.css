@@ -1156,6 +1156,10 @@ html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="
 html[data-gr-accent] :is(query-builder, [class*="QueryBuilder"], [data-testid*="query-builder"]) :is(.qb-filter-value, .qb-entity, .qb-constant, [class*="filterValue"], [class*="FilterValue"], [class*="qualifierValue"]) {
   background: transparent !important; box-shadow: none !important; border-radius: 0 !important;
 }
+/* Current markup (React filter input): span[data-type="filter-value"] over the input. */
+html[data-gr-accent] [data-type="filter-value"] {
+  background: transparent !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; margin: 0 !important; outline: 0 !important;
+}
 
 /* List: active Open/Closed filter with the same look as our tabs (background + accent counter) */
 html[data-gr-accent] [data-gr-state-tab] {
