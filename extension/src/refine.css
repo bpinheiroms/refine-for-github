@@ -1306,8 +1306,17 @@ html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-la
   border: 1px solid color-mix(in srgb, currentColor 35%, transparent) !important; background: color-mix(in srgb, currentColor 12%, transparent) !important;
   font: 500 12px/22px var(--fontStack-sansSerif, sans-serif); display: inline-flex !important; align-items: center;
 }
-html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label]::after { content: attr(data-gr-label); white-space: nowrap; }
-html[data-gr-queue][data-gr-accent] main li.Box-row .flex-items-start.tmp-mr-3 { min-width: 96px; align-items: center !important; }
+html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label] { max-width: 100%; overflow: hidden; }
+html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label]::after { content: attr(data-gr-label); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Status column: one fixed width for every row, so badges, bare icons and titles all
+   line up; a long label ("Not mergeable") is cut instead of running over the title. */
+html[data-gr-queue][data-gr-accent] main li.Box-row .flex-items-start.tmp-mr-3 {
+  flex: 0 0 136px !important; width: 136px !important; min-width: 0 !important; margin-right: 16px !important;
+  align-items: center !important; justify-content: flex-start !important; overflow: hidden;
+}
+html[data-gr-queue][data-gr-accent] main li.Box-row .flex-items-start.tmp-mr-3 > div,
+html[data-gr-queue][data-gr-accent] main li.Box-row .flex-items-start.tmp-mr-3 > div > div { max-width: 100%; min-width: 0; }
+html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon:not([data-gr-label]) { margin-left: 0 !important; }
 /* stats on the right as cards */
 html[data-gr-queue][data-gr-accent] main .col-md-3 > .mb-2 {
   padding: 12px 16px; margin-bottom: 12px !important; border: 1px solid var(--borderColor-muted); border-radius: 12px; background: var(--bgColor-muted);

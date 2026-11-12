@@ -776,8 +776,10 @@
     if (!on) return;
     for (const b of document.querySelectorAll(".hx_merge_queue_entry_status_icon")) {
       const t = (b.getAttribute("aria-labelledby") || "").split(" ").map((id) => document.getElementById(id)?.textContent?.trim()).filter(Boolean).join(" ")
-        || b.getAttribute("aria-label") || "";
+        || (b.id && document.querySelector(`tool-tip[for="${CSS.escape(b.id)}"]`)?.textContent?.trim())
+        || b.getAttribute("aria-label") || b.getAttribute("title") || "";
       if (t && b.getAttribute("data-gr-label") !== t) b.setAttribute("data-gr-label", t);
+      if (t && b.title !== t) b.title = t;
     }    groupQueueByEstimate();
   }
 
