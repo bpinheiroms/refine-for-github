@@ -87,12 +87,15 @@
   const BOT_TITLE = /^(build|chore|fix)\(deps(-dev)?\)|^bump\s|^update (dependency|module|[\w@./-]+ to v?\d)|^lock file maintenance/i;
 
   function rowStateOf(row) {
-    const has = (sel) => row.querySelector(sel) !== null;
-    const label = [...row.querySelectorAll("svg[aria-label], [aria-label] > svg")]
+    // Only the row itself: a merge queue row also holds its (hidden) status dialog,
+    // whose check list has skip/fail icons that are not the PR's state.
+    const own = (sel) => [...row.querySelectorAll(sel)].filter((el) => !el.closest("dialog, [role='dialog']"));
+    const has = (sel) => own(sel).length > 0;
+    const label = own("svg[aria-label], [aria-label] > svg")
       .map((el) => (el.getAttribute("aria-label") || el.parentElement.getAttribute("aria-label") || "").toLowerCase())
       .join(" ");
     if (has(".octicon-git-pull-request-draft, .octicon-issue-draft") || label.includes("draft")
-      || [...row.querySelectorAll("span, div")].some((e) => !e.children.length && e.textContent.trim() === "Draft")) return "draft";
+      || own("span, div").some((e) => !e.children.length && e.textContent.trim() === "Draft")) return "draft";
     if (has(".octicon-git-merge") || label.includes("merged")) return "merged";
     if (has(".octicon-git-pull-request-closed, .octicon-skip, .octicon-issue-closed") || label.includes("closed")) return "closed";
     return "open";
