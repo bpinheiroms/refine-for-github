@@ -1,0 +1,143 @@
+<!doctype html>
+<!-- Protótipo: imita o DOM da lista de PRs do GitHub (dark) e roda o content.js real da extensão. -->
+<html lang="pt-BR" data-color-mode="dark" data-dark-theme="dark" data-light-theme="light">
+<head>
+<meta charset="utf-8" />
+<title>GitHub Refine — protótipo</title>
+<style>
+  /* Tokens "originais" do GitHub dark, para o estado desligado parecer o GitHub */
+  html[data-color-mode="dark"][data-dark-theme="dark"] {
+    --bgColor-default:#0d1117; --bgColor-muted:#151b23; --bgColor-inset:#010409; --bgColor-neutral-muted:#656c7633;
+    --borderColor-default:#3d444d; --borderColor-muted:#3d444db3; --fgColor-default:#f0f6fc; --fgColor-muted:#9198a1;
+    --fgColor-accent:#4493f8; --fgColor-success:#3fb950; --fgColor-done:#ab7df8; --fgColor-danger:#f85149;
+    --underlineNav-borderColor-active:#f78166; --button-primary-bgColor-rest:#238636; --header-bgColor:#010409;
+    --borderRadius-medium:6px; --fontStack-sansSerif:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Helvetica,Arial,sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bgColor-default); color:var(--fgColor-default); font:14px/1.5 var(--fontStack-sansSerif); }
+  a { color:inherit; text-decoration:none; }
+  .gh-header { background:var(--header-bgColor); border-bottom:1px solid var(--borderColor-muted); padding:14px 24px 0; }
+  .crumbs { display:flex; align-items:center; gap:8px; font-size:15px; }
+  .crumbs b { font-weight:600; }
+  .UnderlineNav { display:flex; gap:4px; margin-top:12px; }
+  .UnderlineNav a { padding:8px 10px; border-bottom:2px solid transparent; color:var(--fgColor-default); display:flex; gap:6px; align-items:center; }
+  .UnderlineNav a.sel { border-color:var(--underlineNav-borderColor-active); font-weight:600; }
+  .Counter { padding:0 6px; border-radius:2em; background:var(--bgColor-neutral-muted); font-size:12px; border:1px solid transparent; }
+  .layout { display:grid; grid-template-columns:220px 1fr; gap:24px; padding:24px; max-width:1180px; }
+  .side a { display:block; padding:6px 10px; border-radius:var(--borderRadius-medium); color:var(--fgColor-default); }
+  .side a.sel { background:var(--bgColor-neutral-muted); font-weight:600; }
+  h2 { margin:0 0 14px; font-size:20px; display:flex; justify-content:space-between; align-items:center; }
+  .btn-primary { background:var(--button-primary-bgColor-rest); color:#fff; border:0; border-radius:var(--borderRadius-medium); padding:6px 14px; font:600 13px var(--fontStack-sansSerif); }
+  .search { border:1px solid var(--borderColor-default); background:var(--bgColor-inset); border-radius:var(--borderRadius-medium); padding:6px 10px; margin-bottom:14px; color:var(--fgColor-muted); }
+  .Box { border:1px solid var(--borderColor-default); border-radius:var(--borderRadius-medium); overflow:hidden; }
+  .Box-header { background:var(--bgColor-muted); padding:10px 16px; border-bottom:1px solid var(--borderColor-default); display:flex; gap:16px; color:var(--fgColor-muted); }
+  .Box-header b { color:var(--fgColor-default); }
+  ul.list { list-style:none; margin:0; padding:0; }
+  ul.list > li { display:flex; gap:10px; padding:10px 16px; border-bottom:1px solid var(--borderColor-muted); }
+  ul.list > li:last-child { border-bottom:0; }
+  .octicon { flex:none; margin-top:3px; fill:currentColor; }
+  .octicon-git-pull-request { color:var(--fgColor-success); }
+  .octicon-git-pull-request-draft { color:var(--fgColor-muted); }
+  .title { font-weight:600; font-size:14px; }
+  .meta { font-size:12px; color:var(--fgColor-muted); margin-top:2px; }
+  .meta a { color:var(--fgColor-muted); }
+
+  /* Painel do protótipo (simula o popup) */
+  .proto { position:fixed; right:16px; bottom:16px; width:250px; padding:12px; border-radius:14px; background:#17191f; border:1px solid #2a2e38; color:#e7e9ee; font:12.5px/1.4 -apple-system,sans-serif; box-shadow:0 12px 40px #0008; z-index:99; }
+  .proto b { display:block; margin-bottom:6px; font-size:13px; }
+  .proto label { display:flex; justify-content:space-between; padding:4px 0; cursor:pointer; }
+  .proto .sw { display:flex; gap:6px; margin-top:6px; }
+  .proto .sw button { width:18px; height:18px; border-radius:50%; border:0; background:var(--c); cursor:pointer; }
+</style>
+<link rel="stylesheet" href="../extension/src/refine.css" />
+</head>
+<body>
+  <div class="gh-header">
+    <div class="crumbs"><span>octo-org</span> / <b>example</b></div>
+    <nav class="UnderlineNav">
+      <a>Code</a><a>Issues</a><a class="sel">Pull requests <span class="Counter">7</span></a><a>Actions</a><a>Projects</a><a>Security <span class="Counter">161</span></a><a>Insights</a>
+    </nav>
+  </div>
+
+  <div class="layout">
+    <aside class="side"><a class="sel">Pull requests</a><a>Authored by me</a><a>Assigned to me</a><a>Involves me</a><a>Review requests</a></aside>
+    <main>
+      <h2>All pull requests <button class="btn-primary">New pull request</button></h2>
+      <div class="search">sort:updated-desc is:pr state:open</div>
+      <div class="Box">
+        <div class="Box-header"><b>Open 7</b><span>Closed 351</span><span>Merged</span></div>
+        <ul class="list" id="list"></ul>
+      </div>
+    </main>
+  </div>
+
+  <div class="proto" id="proto">
+    <b>Simulação do popup</b>
+    <label>Extensão ligada <input type="checkbox" data-key="enabled"></label>
+    <label>Tema Grafite <input type="checkbox" data-key="theme"></label>
+    <label>Cartões <input type="checkbox" data-key="cards"></label>
+    <label>Agrupar bots <input type="checkbox" data-key="groupBots"></label>
+    <label>Esmaecer rascunhos <input type="checkbox" data-key="dimDrafts"></label>
+    <label>Debug <input type="checkbox" data-key="debug"></label>
+    <div class="sw">
+      <button data-accent="violet" style="--c:#8b7cf6"></button><button data-accent="blue" style="--c:#5b9dff"></button>
+      <button data-accent="green" style="--c:#3ecf8e"></button><button data-accent="orange" style="--c:#ff9a4d"></button>
+    </div>
+  </div>
+
+<script>
+  // Dados de exemplo
+  const PRS = [
+    { n: 140, t: "build(deps): bump undici from 7.1.0 to 7.2.0", a: "dependabot", s: "open", u: "2 days ago" },
+    { n: 139, t: "build(deps): bump actions/cache from 5 to 6", a: "dependabot", s: "open", u: "3 days ago" },
+    { n: 138, t: "build(deps): bump vite from 7.0.1 to 7.0.4", a: "dependabot", s: "open", u: "3 days ago" },
+    { n: 137, t: "build(deps): bump zod from 4.4.3 to 4.6.7", a: "dependabot", s: "open", u: "5 days ago" },
+    { n: 112, t: "fix(api): retry the upload when the storage returns 503", a: "octocat", s: "draft", u: "2 weeks ago" },
+    { n: 105, t: "feat(auth): sign in with a passkey", a: "octocat", s: "draft", u: "3 weeks ago", c: "5/5" },
+    { n: 11, t: "docs: add architecture guide", a: "octocat", s: "draft", u: "on Jul 24", c: "2/2" },
+  ];
+  const ICON = {
+    open: '<svg class="octicon octicon-git-pull-request" width="16" height="16" viewBox="0 0 16 16"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-1.5 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354Z"/></svg>',
+    draft: '<svg class="octicon octicon-git-pull-request-draft" width="16" height="16" viewBox="0 0 16 16"><path d="M3.25 1A2.25 2.25 0 0 1 4 5.372v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.251 2.251 0 0 1 3.25 1Zm9.5 14a2.25 2.25 0 1 1 0-4.5 2.25 2.25 0 0 1 0 4.5ZM14 7.5a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Zm0-4.25a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Z"/></svg>',
+  };
+  document.getElementById("list").innerHTML = PRS.map((p) => `
+    <li>
+      ${ICON[p.s]}
+      <div>
+        <a class="title" href="/octo-org/example/pull/${p.n}">${p.t}</a>
+        <div class="meta">#${p.n} · <a data-hovercard-url="/users/${p.a}/hovercard" href="/${p.a}">${p.a}</a> opened · Updated ${p.u}${p.c ? " · ✓ " + p.c : ""}</div>
+      </div>
+    </li>`).join("");
+
+  // Stub mínimo de chrome.storage para rodar o content script fora da extensão
+  const listeners = [];
+  let store = {};
+  window.chrome = { storage: {
+    sync: {
+      get(defs, cb) { cb({ ...defs, ...store }); },
+      set(obj) {
+        const changes = {};
+        for (const k in obj) changes[k] = { newValue: obj[k] };
+        Object.assign(store, obj);
+        listeners.forEach((fn) => fn(changes, "sync"));
+      },
+    },
+    onChanged: { addListener(fn) { listeners.push(fn); } },
+  } };
+  try { localStorage.removeItem("gr-settings-cache"); } catch {}
+</script>
+<script src="../extension/src/settings.js"></script>
+<script src="../extension/src/content.js"></script>
+<script>
+  const proto = document.getElementById("proto");
+  const sync = () => chrome.storage.sync.get(GR_DEFAULTS, (s) => {
+    proto.querySelectorAll("input").forEach((i) => (i.checked = !!s[i.dataset.key]));
+  });
+  proto.querySelectorAll("input").forEach((i) =>
+    i.addEventListener("change", () => chrome.storage.sync.set({ [i.dataset.key]: i.checked })));
+  proto.querySelectorAll("[data-accent]").forEach((b) =>
+    b.addEventListener("click", () => chrome.storage.sync.set({ accent: b.dataset.accent })));
+  sync();
+</script>
+</body>
+</html>

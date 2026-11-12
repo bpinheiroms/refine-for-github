@@ -1,0 +1,15 @@
+version: 2
+
+# A extensão não tem dependências de pacote; só as actions dos workflows, fixadas por SHA.
+# `cooldown` espera alguns dias antes de propor uma versão nova: um pacote comprometido
+# costuma ser descoberto e removido nesse tempo.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+    commit-message:
+      prefix: ci

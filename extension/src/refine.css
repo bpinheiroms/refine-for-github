@@ -1,0 +1,1273 @@
+/* GitHub Refine
+ * Tudo aqui é escopado por atributos `data-gr-*` no <html>, que o content script
+ * liga/desliga conforme o popup. Sem atributo, nenhuma regra se aplica.
+ */
+
+/* =========================================================================
+   1. TEMA — sobrescreve os tokens do Primer (design system do GitHub).
+   O GitHub define os tokens em `html[data-color-mode][data-dark-theme]`;
+   nossos seletores têm especificidade maior para vencer sem !important.
+   ========================================================================= */
+
+html[data-gr-theme][data-color-mode][data-light-theme] {
+  --fontStack-sansSerif: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --fontStack-system: var(--fontStack-sansSerif);
+  --borderRadius-small: 6px;
+  --borderRadius-medium: 8px;
+  --borderRadius-large: 12px;
+  --gr-radius-card: 12px;
+  --gr-shadow-hover: 0 1px 2px rgb(0 0 0 / 0.06), 0 6px 18px rgb(0 0 0 / 0.08);
+}
+
+/* Paleta "Grafite" para o modo escuro */
+html[data-gr-theme][data-color-mode="dark"][data-dark-theme] {
+  --bgColor-default: #0f1014;
+  --bgColor-muted: #15171d;
+  --bgColor-inset: #0b0c0f;
+  --bgColor-neutral-muted: #1f222a;
+  --borderColor-default: #2a2e38;
+  --borderColor-muted: #1f222a;
+  --fgColor-default: #e7e9ee;
+  --fgColor-muted: #8a91a2;
+  --overlay-bgColor: #17191f;
+  --header-bgColor: #0b0c0f;
+  /* nomes legados, ainda usados em telas antigas */
+  --color-canvas-default: var(--bgColor-default);
+  --color-canvas-subtle: var(--bgColor-muted);
+  --color-border-default: var(--borderColor-default);
+  --color-border-muted: var(--borderColor-muted);
+  --color-fg-default: var(--fgColor-default);
+  --color-fg-muted: var(--fgColor-muted);
+  --gr-shadow-hover: 0 0 0 1px #2f3440, 0 8px 24px rgb(0 0 0 / 0.45);
+}
+@media (prefers-color-scheme: dark) {
+  html[data-gr-theme][data-color-mode="auto"][data-dark-theme] {
+    --bgColor-default: #0f1014;
+    --bgColor-muted: #15171d;
+    --bgColor-inset: #0b0c0f;
+    --bgColor-neutral-muted: #1f222a;
+    --borderColor-default: #2a2e38;
+    --borderColor-muted: #1f222a;
+    --fgColor-default: #e7e9ee;
+    --fgColor-muted: #8a91a2;
+    --overlay-bgColor: #17191f;
+    --header-bgColor: #0b0c0f;
+    --gr-shadow-hover: 0 0 0 1px #2f3440, 0 8px 24px rgb(0 0 0 / 0.45);
+  }
+}
+
+/* Acento (links, aba ativa, foco). O verde do botão principal vira a cor de acento. */
+html[data-gr-theme][data-gr-accent="violet"] { --gr-accent: #8b7cf6; --gr-accent-strong: #6d5df0; }
+html[data-gr-theme][data-gr-accent="blue"]   { --gr-accent: #5b9dff; --gr-accent-strong: #2f7bf5; }
+html[data-gr-theme][data-gr-accent="green"]  { --gr-accent: #3ecf8e; --gr-accent-strong: #1fa971; }
+html[data-gr-theme][data-gr-accent="orange"] { --gr-accent: #ff9a4d; --gr-accent-strong: #f07a1f; }
+
+html[data-gr-theme][data-gr-accent][data-color-mode][data-dark-theme] {
+  --fgColor-accent: var(--gr-accent);
+  /* fundos/bordas "accent muted" no mesmo tom do acento (antes ficavam azuis
+     atrás de texto roxo, ex.: os valores "pr"/"open" na busca da lista) */
+  --bgColor-accent-muted: color-mix(in srgb, var(--gr-accent) 16%, transparent);
+  --borderColor-accent-muted: color-mix(in srgb, var(--gr-accent) 40%, transparent);
+  --bgColor-accent-emphasis: var(--gr-accent-strong);
+  --borderColor-accent-emphasis: var(--gr-accent);
+  --focus-outlineColor: var(--gr-accent);
+  --underlineNav-borderColor-active: var(--gr-accent);
+  --button-primary-bgColor-rest: var(--gr-accent-strong);
+  --button-primary-bgColor-hover: var(--gr-accent);
+  --button-primary-borderColor-rest: transparent;
+  --button-primary-borderColor-hover: transparent;
+}
+
+html[data-gr-theme] body {
+  font-family: var(--fontStack-sansSerif);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+
+/* Contadores (Pull requests 7) como pílulas discretas */
+html[data-gr-theme] .Counter {
+  background: var(--bgColor-neutral-muted);
+  color: var(--fgColor-muted);
+  font-weight: 600;
+  border: 0;
+}
+
+/* =========================================================================
+   2. LISTAS EM CARTÕES — linhas marcadas pelo content script
+   ========================================================================= */
+
+html[data-gr-cards] [data-gr-list] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: var(--bgColor-muted);
+}
+
+html[data-gr-cards] [data-gr-row] {
+  position: relative;
+  border: 1px solid var(--borderColor-muted) !important;
+  border-radius: var(--gr-radius-card, 12px);
+  background: var(--bgColor-default);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s, opacity 0.15s;
+}
+html[data-gr-cards] [data-gr-row]:hover {
+  border-color: var(--borderColor-default) !important;
+  box-shadow: var(--gr-shadow-hover);
+  transform: translateY(-1px);
+}
+
+/* Faixa de estado à esquerda */
+html[data-gr-cards] [data-gr-row]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--gr-state-color, transparent);
+}
+[data-gr-row][data-gr-state="open"]   { --gr-state-color: var(--fgColor-success, #3fb950); }
+[data-gr-row][data-gr-state="draft"]  { --gr-state-color: var(--fgColor-muted, #8b949e); }
+[data-gr-row][data-gr-state="merged"] { --gr-state-color: var(--fgColor-done, #a371f7); }
+[data-gr-row][data-gr-state="closed"] { --gr-state-color: var(--fgColor-danger, #f85149); }
+
+html[data-gr-cards] [data-gr-title] {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+}
+
+/* Etiqueta "Rascunho" ao lado do título, só com CSS */
+html[data-gr-cards] [data-gr-state="draft"] [data-gr-title]::after {
+  content: "Draft";
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border: 1px solid var(--borderColor-default);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fgColor-muted);
+  vertical-align: 2px;
+}
+
+/* =========================================================================
+   3. RASCUNHOS ESMAECIDOS
+   ========================================================================= */
+
+html[data-gr-dim-drafts] [data-gr-row][data-gr-state="draft"] { opacity: 0.55; }
+html[data-gr-dim-drafts] [data-gr-row][data-gr-state="draft"]:hover { opacity: 1; }
+
+/* =========================================================================
+   4. BOTS AGRUPADOS — reordenados com `order` (sem mover nós do React)
+   ========================================================================= */
+
+html[data-gr-group-bots] [data-gr-list] { display: flex; flex-direction: column; }
+html[data-gr-group-bots] [data-gr-list] > * { order: 0; }
+html[data-gr-group-bots] [data-gr-list] > .gr-bot-toggle:not(.gr-draft-toggle) { order: 9; }
+/* Drafts agrupados antes dos bots */
+html[data-gr-group-bots] [data-gr-list] > .gr-draft-toggle { order: 7; }
+html[data-gr-group-bots] [data-gr-list] > [data-gr-draft] { order: 8; }
+html[data-gr-group-bots] [data-gr-list]:not([data-gr-drafts-open]):has(> .gr-draft-toggle) > [data-gr-draft] { display: none !important; }
+[data-gr-drafts-open] > .gr-draft-toggle .gr-chevron { transform: rotate(90deg); }
+.gr-bot-toggle .gr-bot-icon.gr-draft-icon { color: var(--fgColor-muted); background: var(--bgColor-neutral-muted, rgba(101,108,118,.2)); }
+html[data-gr-group-bots] [data-gr-list] > [data-gr-bot] { order: 10; }
+html[data-gr-group-bots] [data-gr-list]:not([data-gr-bots-open]):has(> .gr-bot-toggle:not(.gr-draft-toggle)) > [data-gr-bot] {
+  display: none !important;
+}
+
+.gr-bot-toggle { display: none; }
+html[data-gr-group-bots] .gr-bot-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px dashed var(--borderColor-default);
+  border-radius: var(--gr-radius-card, 12px);
+  background: transparent;
+  color: var(--fgColor-muted);
+  font: 500 13px/1.4 var(--fontStack-sansSerif, sans-serif);
+  text-align: left;
+  cursor: pointer;
+}
+html[data-gr-group-bots] .gr-bot-toggle:hover { color: var(--fgColor-default); border-style: solid; }
+.gr-bot-toggle .gr-bot-icon {
+  display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%;
+  color: var(--fgColor-accent, #4493f8); background: var(--bgColor-accent-muted, rgba(56,139,253,.15));
+}
+.gr-bot-toggle .gr-bot-icon svg, .gr-bot-toggle .gr-chevron svg { display: block; }
+.gr-bot-toggle .gr-chevron { margin-left: auto; display: inline-grid; place-items: center; color: var(--fgColor-muted); transition: transform 0.15s; }
+[data-gr-bots-open] > .gr-bot-toggle:not(.gr-draft-toggle) .gr-chevron { transform: rotate(90deg); }
+
+/* =========================================================================
+   5. LEITURA — markdown (descrição do PR, comentários, README)
+   ========================================================================= */
+
+html[data-gr-readable] .markdown-body {
+  font-size: 15px;
+  line-height: 1.7;
+}
+html[data-gr-readable] .markdown-body > :is(p, ul, ol, blockquote) { max-width: 78ch; }
+html[data-gr-readable] .markdown-body :is(h1, h2) {
+  border-bottom: 0;
+  padding-bottom: 0;
+  letter-spacing: -0.02em;
+}
+html[data-gr-readable] .markdown-body h2 { font-size: 1.3em; margin-top: 1.8em; }
+html[data-gr-readable] .markdown-body > :first-child { margin-top: 0 !important; }
+html[data-gr-readable] .markdown-body li + li { margin-top: 0.3em; }
+html[data-gr-readable] .markdown-body li > ul { margin-top: 0.3em; }
+html[data-gr-readable] .markdown-body :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  font-size: 0.86em;
+}
+
+html[data-gr-readable] [data-gr-pr-title] {
+  letter-spacing: -0.02em;
+  font-weight: 600;
+}
+
+/* =========================================================================
+   5b. PÁGINA DO PR
+   ========================================================================= */
+
+/* Contadores das abas (Commits 4, Checks 5...). No React a classe é
+   `prc-CounterLabel-<hash>`: o prefixo é estável, só o hash muda. */
+html[data-gr-theme] [class*="CounterLabel"] {
+  background: var(--bgColor-neutral-muted) !important;
+  color: var(--fgColor-muted) !important;
+  font-weight: 600;
+}
+
+/* Selo de estado: de bloco chapado para pílula suave */
+html[data-gr-theme] [data-gr-state-pill] {
+  --gr-pill: var(--fgColor-success, #3fb950);
+  background: color-mix(in srgb, var(--gr-pill) 14%, transparent) !important;
+  color: var(--gr-pill) !important;
+  border: 1px solid color-mix(in srgb, var(--gr-pill) 35%, transparent) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 2px 10px !important;
+  min-height: 0 !important;
+  gap: 5px;
+}
+html[data-gr-theme] [data-gr-state-pill] svg { width: 13px; height: 13px; fill: currentColor; }
+html[data-gr-theme] :is([data-gr-pr-state="merged"], [data-gr-pr-state="mesclado"])[data-gr-state-pill] { --gr-pill: var(--fgColor-done, #ab7df8); }
+html[data-gr-theme] :is([data-gr-pr-state="closed"], [data-gr-pr-state="fechado"])[data-gr-state-pill] { --gr-pill: var(--fgColor-danger, #f85149); }
+html[data-gr-theme] :is([data-gr-pr-state="draft"], [data-gr-pr-state="rascunho"])[data-gr-state-pill] { --gr-pill: var(--fgColor-muted, #9198a1); }
+
+/* Título: menor e mais leve (o "#81" e a barra fixa já identificam a PR) */
+html[data-gr-theme] [data-gr-pr-title] {
+  font-size: 24px !important;
+  line-height: 32px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+}
+
+/* Branches: chips monoespaçados discretos */
+html[data-gr-theme] [data-gr-branch] {
+  background: var(--bgColor-neutral-muted) !important;
+  color: var(--fgColor-muted) !important;
+  border-radius: 6px !important;
+  padding: 1px 7px !important;
+  font: 500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace !important;
+}
+
+/* Barra lateral / aba Details: uma lista uniforme.
+   Toda seção tem o mesmo respiro e a mesma divisória; vazias viram uma linha
+   "Nome ........ None yet" (engrenagem aparece no hover); preenchidas mostram o
+   nome em destaque e o conteúdo embaixo. Sem esmaecer e sem fundos parciais. */
+html[data-gr-compact-sidebar] [data-gr-sb] {
+  margin: 0 !important; padding: 12px 0 !important; opacity: 1 !important;
+  border: 0 !important; border-top: 1px solid var(--borderColor-muted) !important; background: none !important;
+}
+html[data-gr-compact-sidebar] [data-gr-sb]:first-of-type { border-top: 0 !important; }
+html[data-gr-compact-sidebar] [data-gr-sb] :is(h2, h3, [class*="Heading"], [class*="sectionTitle"], [class*="SectionTitle"]) {
+  font: 600 13px/20px var(--fontStack-sansSerif, sans-serif) !important; color: var(--fgColor-default) !important; margin: 0 !important;
+}
+/* fundos de hover do GitHub que pintam só parte da linha */
+html[data-gr-compact-sidebar] [data-gr-sb] :is([role="button"], button:not([data-component="IconButton"]), summary, a):hover { background: none !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] {
+  display: flex !important; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px;
+}
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] > * { margin: 0 !important; padding: 0 !important; min-height: 0 !important; background: none !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(h2, h3, [class*="Heading"], [class*="sectionTitle"], [class*="SectionTitle"]) { color: var(--fgColor-muted) !important; font-weight: 500 !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(p, span, a, div) { font-size: 12.5px !important; line-height: 20px !important; padding-block: 0 !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(p, span, a):not(:has(*)) { color: var(--fgColor-muted) !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] [data-component="IconButton"],
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] button:has(svg):not(:has(span:not(:empty))) { opacity: 0; transition: opacity 0.15s; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover [data-component="IconButton"],
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover button:has(svg) { opacity: 1; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] a { text-decoration: none !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] a:hover { text-decoration: underline !important; color: var(--fgColor-default) !important; }
+/* labels preenchidas: pílulas um pouco menores */
+html[data-gr-compact-sidebar] [data-gr-sb="labels"] [data-component="Label"], html[data-gr-compact-sidebar] [data-gr-sb="labels"] .IssueLabel { font-size: 12px !important; }
+
+/* Número da PR ao lado do título (nosso botão ou o "#123" do próprio GitHub) */
+.gr-pr-num { display: none; }
+html[data-gr-pr-number] .gr-pr-num,
+html[data-gr-pr-number] [data-gr-pr-num] {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 12px;
+  padding: 2px 10px;
+  border: 1px solid var(--borderColor-default);
+  border-radius: 999px;
+  background: var(--bgColor-neutral-muted);
+  color: var(--fgColor-muted) !important;
+  font: 600 0.55em/1.5 ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  letter-spacing: 0;
+  vertical-align: 0.25em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+html[data-gr-pr-number] [data-gr-pr-num] * { font: inherit !important; color: inherit !important; padding: 0 !important; }
+html[data-gr-pr-number] .gr-pr-num:hover {
+  color: var(--fgColor-default) !important;
+  border-color: var(--gr-accent, var(--fgColor-accent));
+}
+
+/* Seletor "Preview" (interface nova): destacado, com dica de como voltar */
+/* (sem destaque: o contorno tracejado e a dica "back to classic" poluíam o topo;
+   o seletor Preview do GitHub continua no lugar, com o título explicando) */
+
+/* =========================================================================
+   5c. COCKPIT — Overview como "o que falta para o merge" (src/cockpit.js)
+   Com o resumo carregado (data-gr-cockpit-ready), as caixas originais ficam
+   escondidas; os botões do cockpit reabrem cada uma (data-gr-show-*).
+   ========================================================================= */
+
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-mergebox],
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar]):not([data-gr-stacked]) [data-gr-pane] {
+  display: none !important;
+}
+#gr-panel { display: none; }
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) #gr-panel { display: block; }
+
+/* Comentários da Overview nova: ficam na aba Comments do painel, não na coluna.
+   Commits e a caixa de novo comentário continuam no lugar. */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) main [data-testid="timeline-item"]:has(article:is([id^="issuecomment-"], [id^="pullrequestreview-"])),
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments) > [class*="controlsRow"],
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments) form:has(textarea) {
+  display: none !important;
+}
+/* O que sobra da seção são os commits */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments)::before {
+  content: "Commits"; display: block; margin: 8px 0 12px; font: 600 16px var(--fontStack-sansSerif, sans-serif); color: var(--fgColor-default);
+}
+/* Novo comentário, no topo da aba Comments */
+#gr-panel .gr-new { margin: 0 0 12px; padding: 10px; border: 1px solid var(--borderColor-muted); border-radius: 10px; background: var(--bgColor-muted); }
+#gr-panel .gr-new .gr-reply { min-height: 64px; font-size: 13px; }
+#gr-panel .gr-new .gr-cbar { margin-top: 8px; }
+/* Alinhamento: o GitHub centraliza o cabeçalho numa caixa de 1356px. As colunas
+   (cockpit + painel) usam a mesma caixa, e a barra fixa de cima também, então
+   título, abas, cockpit e painel começam e terminam nas mesmas linhas. */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] {
+  max-width: 1356px !important; margin-inline: auto !important; justify-content: flex-start !important;
+}
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] > [class*="prc-PageLayout-ContentWrapper"] {
+  flex: 1 1 0 !important; max-width: none !important; min-width: 0 !important;
+}
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] > [class*="prc-PageLayout-ContentWrapper"] > [class*="prc-PageLayout-Content-"] {
+  max-width: none !important;
+}
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [class*="miniHeaderInner"] {
+  padding-left: calc(24px + max(0px, (100% - 1420px) / 2)) !important;
+  padding-right: calc(32px + max(0px, (100% - 1420px) / 2)) !important;
+}
+
+/* Aba Details quando a barra lateral não pode entrar no painel: ela aparece
+   na coluna da direita e as abas do painel ficam por cima, no topo dela. */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [data-gr-cols] { position: relative !important; }
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] #gr-panel {
+  position: absolute; top: 0; right: 0; width: var(--gr-pw); max-height: none; overflow: visible; z-index: 3;
+}
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [data-gr-pane] {
+  flex: 0 0 var(--gr-pw) !important; width: var(--gr-pw) !important; max-width: none !important;
+  margin-left: 24px !important; padding-top: 64px !important;
+}
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [data-gr-pane] > [class*="prc-PageLayout-Pane-"] {
+  flex: 1 1 auto !important; width: auto !important; max-width: none !important; margin: 0 !important;
+}
+
+/* Painel da direita: no lugar da barra lateral, fixo enquanto a página rola */
+#gr-panel {
+  order: 99; /* o Primer ordena as colunas com `order`; o painel vai para o fim (direita) */
+  flex: 0 0 var(--gr-pw);
+  align-self: flex-start;
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 88px);
+  overflow: auto;
+  margin-left: 24px;
+  padding: 0 4px 16px;
+  font: 13px/1.45 var(--fontStack-sansSerif, -apple-system, sans-serif);
+  color: var(--fgColor-default);
+}
+/* Tela estreita: painel logo abaixo do cockpit, sem ficar fixo */
+#gr-panel[data-stacked] {
+  /* Na Overview nova o pai é um flex em coluna: sem isso o painel vai para o fim
+     (order: 99) e encolhe até a largura do conteúdo (cards espremidos). */
+  order: 0; align-self: stretch; width: 100%; min-width: 0;
+  position: static; flex: none; max-height: none; overflow: visible; margin: 0 0 24px; padding: 0;
+}
+#gr-panel[data-stacked] .gr-tabs { position: static; overflow-x: auto; scrollbar-width: none; }
+#gr-panel[data-stacked] .gr-tab { flex: 1 0 auto; }
+html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important; width: auto !important; }
+@media (max-width: 899.98px) {
+  html[data-gr-show-sidebar] [data-gr-pane] { width: auto !important; flex: none !important; margin-left: 0 !important; padding-top: 0 !important; }
+}
+#gr-panel .gr-tabs {
+  position: sticky; top: 0; z-index: 1; display: flex; gap: 4px; margin-bottom: 12px; padding: 4px;
+  border: 1px solid var(--borderColor-muted); border-radius: 12px; background: var(--bgColor-default);
+}
+#gr-panel .gr-tab {
+  flex: 1 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 32px; padding: 0 12px;
+  border: 0; border-radius: 8px; background: none; color: var(--fgColor-muted); font: 500 12.5px var(--fontStack-sansSerif, sans-serif); cursor: pointer;
+}
+#gr-panel .gr-tab:hover { color: var(--fgColor-default); }
+/* O painel se ajusta à própria largura (não à da janela): abas mais compactas quando aperta */
+#gr-panel { container-type: inline-size; }
+#gr-panel .gr-tab { min-width: 0; white-space: nowrap; }
+@container (max-width: 400px) {
+  #gr-panel .gr-tabs { gap: 2px; }
+  #gr-panel .gr-tab { padding: 0 8px; gap: 6px; font-size: 12px; }
+  #gr-panel .gr-n { min-width: 18px; padding: 0 5px; }
+}
+@container (max-width: 350px) {
+  #gr-panel .gr-tab { padding: 0 5px; gap: 4px; font-size: 11.5px; }
+  #gr-panel .gr-rep { font-size: 10.5px; }
+}
+/* Conversas sem resolver: o contador da aba fica em destaque (é o que bloqueia o merge) */
+#gr-panel .gr-tab.gr-attn .gr-n { background: var(--bgColor-attention-emphasis, #9e6a03) !important; color: #fff !important; }
+#gr-panel .gr-tab[aria-selected="true"] { background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-default); font-weight: 600; }
+#gr-panel .gr-n { font-variant-numeric: tabular-nums; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--bgColor-muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+#gr-panel .gr-tab[aria-selected="true"] .gr-n { background: var(--bgColor-default); }
+#gr-panel .gr-empty p { margin: 0 0 10px; }
+#gr-panel .gr-empty { margin: 16px 4px; color: var(--fgColor-muted); font-size: 12.5px; text-align: center; }
+#gr-panel .gr-card.gr-done { opacity: 0.7; }
+/* Aba Details: a barra lateral original do GitHub, dentro do painel */
+#gr-panel .gr-details { padding: 2px 6px; }
+#gr-panel .gr-details [data-gr-sb] { padding-block: 10px !important; border-top: 1px solid var(--borderColor-muted) !important; }
+#gr-panel .gr-details [data-gr-sb]:first-of-type { border-top: 0 !important; }
+#gr-panel .gr-card.gr-done .gr-loc::before { content: "✓ "; color: var(--fgColor-success, #3fb950); }
+#gr-panel .gr-card {
+  display: flex; flex-direction: column; gap: 3px; width: 100%; margin: 0 0 6px; padding: 9px 12px;
+  border: 1px solid var(--borderColor-muted); border-radius: 10px; background: var(--bgColor-muted);
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+#gr-panel .gr-card:hover { border-color: var(--borderColor-default); background: var(--bgColor-default); }
+#gr-panel .gr-loc { font: 11.5px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fgColor-muted); word-break: break-all; }
+#gr-panel .gr-chead { display: flex; align-items: center; gap: 8px; min-width: 0; }
+#gr-panel .gr-chead .gr-loc { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
+#gr-panel .gr-tag {
+  flex: none; padding: 0 7px; border: 1px solid color-mix(in srgb, var(--fgColor-attention, #d29922) 45%, transparent); border-radius: 999px;
+  color: var(--fgColor-attention, #d29922); font: 500 10.5px/16px var(--fontStack-sansSerif, sans-serif);
+}
+#gr-panel .gr-meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+#gr-panel .gr-meta .gr-who { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#gr-panel .gr-rep { flex: none; padding: 0 8px; border-radius: 999px; background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-muted); font: 500 11px/18px var(--fontStack-sansSerif, sans-serif); }
+#gr-panel .gr-rep.gr-rep-new { background: color-mix(in srgb, var(--gr-accent, var(--fgColor-accent)) 22%, transparent); color: var(--gr-accent, var(--fgColor-accent)); }
+/* Resposta de outra pessoa: o destaque fica só no selo "X replied" (sem borda colorida no cartão) */
+#gr-panel .gr-ct { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#gr-panel .gr-who { display: flex; align-items: center; gap: 6px; color: var(--fgColor-muted); font-size: 11.5px; }
+#gr-panel .gr-who img { width: 14px; height: 14px; border-radius: 50%; }
+
+/* Modal com a conversa inteira (cópia só de leitura) */
+/* Conversa aberta: gaveta à direita, no mesmo padrão dos painéis do GitHub */
+#gr-modal { position: fixed; inset: 0; z-index: 200; display: flex; justify-content: flex-end; background: rgb(1 4 9 / 0.3); }
+#gr-modal .gr-mbox {
+  width: min(600px, 100vw); height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
+  border-left: 1px solid var(--borderColor-default); background: var(--bgColor-default); box-shadow: -24px 0 64px rgb(0 0 0 / 0.45);
+  animation: gr-drawer-in 0.2s ease-out;
+}
+#gr-modal .gr-mbody { flex: 1; }
+@media (prefers-reduced-motion: reduce) { #gr-modal .gr-mbox { animation: none; } }
+#gr-modal .gr-btn { white-space: nowrap; }
+/* Celular: o modal ocupa a tela inteira */
+@media (max-width: 640px) {
+  #gr-modal .gr-mbox { width: 100%; border: 0; }
+  #gr-modal .gr-mbody { padding: 12px; }
+  #gr-modal .gr-cbar { flex-wrap: wrap; justify-content: flex-end; }
+  #gr-modal .gr-rstatus { flex-basis: 100%; }
+}
+#gr-modal .gr-mhead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--borderColor-muted); font: 14px var(--fontStack-sansSerif, sans-serif); color: var(--fgColor-default); }
+#gr-modal .gr-mhead b { margin-right: auto; }
+#gr-modal .gr-mbody { overflow: auto; padding: 16px; }
+:is(#gr-modal, #gr-panel) .gr-btn {
+  height: 28px; padding: 0 10px; border: 1px solid var(--borderColor-default); border-radius: 6px;
+  background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-default); font: 500 12px var(--fontStack-sansSerif, sans-serif); cursor: pointer;
+}
+#gr-modal .gr-x { border: 0; background: none; color: var(--fgColor-muted); font-size: 22px; line-height: 1; cursor: pointer; }
+#gr-modal .gr-composer { border-top: 1px solid var(--borderColor-muted); padding: 12px 16px 14px; background: var(--bgColor-muted); }
+:is(#gr-modal, #gr-panel) .gr-reply {
+  display: block; width: 100%; min-height: 72px; resize: vertical; padding: 10px 12px; border: 1px solid var(--borderColor-default); border-radius: 8px;
+  background: var(--bgColor-default); color: var(--fgColor-default); font: 14px/1.5 var(--fontStack-sansSerif, sans-serif);
+}
+:is(#gr-modal, #gr-panel) .gr-reply:focus { outline: 2px solid var(--gr-accent, var(--fgColor-accent)); outline-offset: -1px; border-color: transparent; }
+:is(#gr-modal, #gr-panel) .gr-cbar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+:is(#gr-modal, #gr-panel) .gr-rstatus { margin-right: auto; color: var(--fgColor-muted); font: 12px var(--fontStack-sansSerif, sans-serif); }
+:is(#gr-modal, #gr-panel) .gr-btn.gr-pri { background: var(--button-primary-bgColor-rest, #238636); border-color: transparent; color: var(--button-primary-fgColor-rest, #fff); }
+:is(#gr-modal, #gr-panel) .gr-btn.gr-ghostbtn { background: none; border-color: transparent; color: var(--fgColor-muted); }
+#gr-modal .gr-mbody > * { margin: 0 !important; }
+.gr-flash { outline: 2px solid var(--gr-accent, var(--fgColor-accent)) !important; outline-offset: 4px; border-radius: 8px; transition: outline-color 1s; }
+
+#gr-cockpit {
+  --gr-ok: var(--fgColor-success, #3fb950);
+  --gr-warn: var(--fgColor-attention, #d29922);
+  --gr-bad: var(--fgColor-danger, #f85149);
+  --gr-line: var(--borderColor-default, #3d444d);
+  --gr-line2: var(--borderColor-muted, #2a313a);
+  --gr-mut: var(--fgColor-muted, #9198a1);
+  margin: 0 0 20px;
+  font: 14px/1.5 var(--fontStack-sansSerif, -apple-system, sans-serif);
+  color: var(--fgColor-default);
+}
+#gr-cockpit button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+#gr-cockpit img { width: 16px; height: 16px; border-radius: 50%; }
+
+#gr-cockpit button.gr-chip { cursor: pointer; font: inherit; }
+#gr-cockpit button.gr-chip:hover { border-color: var(--gr-line); }
+#gr-cockpit .gr-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--gr-line2); border-radius: 999px; padding: 2px 9px 2px 3px; color: var(--fgColor-default); }
+#gr-cockpit .gr-label { padding-left: 9px; border-color: color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 18%, transparent); }
+
+#gr-cockpit .gr-verdict { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 12px; }
+#gr-cockpit .gr-verdict h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; border: 0; padding: 0; }
+#gr-cockpit .gr-verdict p { margin: 2px 0 0; color: var(--gr-mut); font-size: 12px; }
+#gr-cockpit .gr-link { color: var(--fgColor-accent) !important; }
+
+#gr-cockpit .gr-todo { border: 1px solid var(--gr-line); border-radius: 12px; overflow: hidden; background: var(--bgColor-muted); }
+#gr-cockpit .gr-item { display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 12px; align-items: start; padding: 14px 18px; border-top: 1px solid var(--gr-line2); }
+#gr-cockpit .gr-item:first-child { border-top: 0; }
+#gr-cockpit .gr-ic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; margin-top: 1px; border: 1.5px solid var(--gr-mut); }
+#gr-cockpit [data-st="ok"] > .gr-ic { border: 0; color: var(--gr-ok); background: color-mix(in srgb, var(--gr-ok) 16%, transparent); }
+#gr-cockpit [data-st="warn"] > .gr-ic { border: 0; color: var(--gr-warn); background: color-mix(in srgb, var(--gr-warn) 16%, transparent); }
+#gr-cockpit [data-st="bad"] > .gr-ic { border: 0; color: var(--gr-bad); background: color-mix(in srgb, var(--gr-bad) 16%, transparent); }
+#gr-cockpit [data-st="ok"] .gr-txt b { font-weight: 500; color: var(--gr-mut); }
+#gr-cockpit .gr-sub { color: var(--gr-mut); font-size: 13px; }
+#gr-cockpit .gr-acts { display: flex; gap: 6px; }
+
+#gr-cockpit .gr-btn {
+  display: inline-flex; align-items: center; height: 28px; padding: 0 10px !important; white-space: nowrap;
+  border: 1px solid var(--gr-line) !important; border-radius: 6px; background: var(--bgColor-neutral-muted, #262c36) !important;
+  color: var(--fgColor-default) !important; font-size: 12px !important; font-weight: 500; text-decoration: none !important;
+}
+#gr-cockpit .gr-btn:hover { border-color: var(--fgColor-muted) !important; }
+#gr-cockpit .gr-btn.gr-pri { background: var(--button-primary-bgColor-rest, #238636) !important; border-color: transparent !important; color: var(--button-primary-fgColor-rest, #fff) !important; }
+
+#gr-cockpit .gr-checks { grid-column: 2 / 4; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+#gr-cockpit .gr-check {
+  display: grid; grid-template-columns: 8px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 7px 12px;
+  border: 1px solid var(--gr-line2); border-radius: 8px; background: var(--bgColor-default); color: var(--fgColor-default) !important; text-decoration: none !important; font-size: 13px;
+}
+#gr-cockpit a.gr-check:hover { border-color: var(--gr-line); }
+#gr-cockpit .gr-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gr-warn); }
+#gr-cockpit .gr-check[data-st="bad"] .gr-dot { background: var(--gr-bad); }
+#gr-cockpit .gr-check[data-st="ok"] .gr-dot { background: var(--gr-ok); }
+#gr-cockpit .gr-cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#gr-cockpit .gr-cs { color: var(--gr-mut); font-size: 12px; white-space: nowrap; }
+#gr-cockpit .gr-req { font-size: 11px; color: var(--gr-mut); border: 1px solid var(--gr-line); border-radius: 999px; padding: 0 7px; }
+#gr-cockpit .gr-ok-checks summary { cursor: pointer; color: var(--gr-mut); font-size: 12px; padding: 4px 2px; }
+#gr-cockpit .gr-ok-checks[open] { display: flex; flex-direction: column; gap: 4px; }
+
+#gr-cockpit .gr-merge { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--gr-line); background: var(--bgColor-default); }
+#gr-cockpit .gr-hint { color: var(--gr-mut); font-size: 12px; margin-right: auto; }
+#gr-cockpit .gr-merge { flex-wrap: wrap; }
+
+
+#gr-cockpit .gr-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 12px; font-size: 12px; }
+#gr-cockpit .gr-foot .gr-orig { margin-left: auto; }
+/* Só aparece quando a Overview original está à vista (ex.: depois de "Open in place"), para voltar */
+html:not([data-gr-cockpit-off]) #gr-cockpit .gr-orig { display: none; }
+/* Feito: uma linha discreta, sem disputar atenção com o que falta */
+#gr-cockpit .gr-donerow { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 20px; border-top: 1px solid var(--gr-line2); color: var(--gr-mut); font-size: 12px; }
+#gr-cockpit .gr-donerow i { font-style: normal; color: var(--gr-ok); margin-right: 6px; }
+#gr-cockpit .gr-todo > .gr-donerow:first-child { border-top: 0; }
+/* Menu "More actions" */
+#gr-cockpit .gr-more { position: relative; }
+#gr-cockpit .gr-more summary { list-style: none; cursor: pointer; color: var(--gr-mut); }
+#gr-cockpit .gr-more summary::-webkit-details-marker { display: none; }
+#gr-cockpit .gr-more summary::after { content: " ▾"; }
+#gr-cockpit .gr-more summary:hover { color: var(--fgColor-default); }
+#gr-cockpit .gr-menu {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 180px; display: flex; flex-direction: column; padding: 4px;
+  border: 1px solid var(--gr-line); border-radius: 12px; background: var(--overlay-bgColor, var(--bgColor-default)); box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+#gr-cockpit .gr-menu button { text-align: left; padding: 6px 10px; border-radius: 8px; color: var(--fgColor-default); font-size: 13px; }
+#gr-cockpit .gr-menu button:hover { background: var(--bgColor-neutral-muted, #262c36); }
+#gr-cockpit .gr-menu button.gr-d { color: var(--gr-bad); }
+#gr-cockpit .gr-foot > button { color: var(--gr-mut); }
+#gr-cockpit .gr-foot > button:hover { color: var(--fgColor-default); }
+#gr-cockpit .gr-foot > .gr-d:hover { color: var(--gr-bad); }
+#gr-cockpit .gr-foot .gr-orig { margin-left: auto; }
+/* Só aparece quando a Overview original está à vista (ex.: depois de "Open in place"), para voltar */
+html:not([data-gr-cockpit-off]) #gr-cockpit .gr-orig { display: none; }
+
+#gr-cockpit .gr-notice { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 10px 14px; border: 1px dashed var(--gr-line); border-radius: 10px; font-size: 13px; color: var(--gr-mut); }
+#gr-cockpit .gr-notice b { color: var(--fgColor-default); }
+
+/* Rolagem até o título deixa espaço para o cabeçalho fixo do GitHub */
+html[data-gr-toc] .markdown-body :is(h1, h2, h3) { scroll-margin-top: 90px; }
+
+/* Índice flutuante (nó da extensão, fora do React) */
+#gr-toc { display: none; }
+html[data-gr-toc] #gr-toc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
+  font: 13px/1.4 var(--fontStack-sansSerif, -apple-system, sans-serif);
+}
+.gr-toc-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--borderColor-default);
+  border-radius: 999px;
+  background: var(--overlay-bgColor, var(--bgColor-default));
+  color: var(--fgColor-default);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+  cursor: pointer;
+}
+.gr-toc-pill em {
+  font-style: normal;
+  color: var(--fgColor-muted);
+  background: var(--bgColor-neutral-muted);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+}
+.gr-toc-panel {
+  display: none;
+  flex-direction: column;
+  min-width: 220px;
+  max-width: 300px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 10px 6px;
+  border: 1px solid var(--borderColor-default);
+  border-radius: 14px;
+  background: var(--overlay-bgColor, var(--bgColor-default));
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.45);
+}
+#gr-toc[data-open] .gr-toc-panel { display: flex; }
+.gr-toc-panel b {
+  padding: 2px 10px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fgColor-muted);
+}
+.gr-toc-item {
+  border: 0;
+  border-left: 2px solid transparent;
+  background: none;
+  color: var(--fgColor-muted);
+  font: inherit;
+  text-align: left;
+  padding: 5px 10px;
+  border-radius: 0 6px 6px 0;
+  cursor: pointer;
+}
+.gr-toc-item[data-level="3"] { padding-left: 22px; font-size: 12.5px; }
+.gr-toc-item:hover { color: var(--fgColor-default); background: var(--bgColor-neutral-muted); }
+.gr-toc-item[data-active] {
+  color: var(--fgColor-default);
+  border-left-color: var(--gr-accent, var(--fgColor-accent));
+  font-weight: 600;
+}
+
+/* =========================================================================
+   6. DEBUG — mostra o que a extensão reconheceu (útil quando o GitHub muda o HTML)
+   ========================================================================= */
+
+html[data-gr-debug] [data-gr-list]  { outline: 2px dashed #f0b72f !important; }
+html[data-gr-debug] [data-gr-row]   { outline: 1px solid #58a6ff !important; }
+html[data-gr-debug] [data-gr-title] { outline: 1px dotted #ff7b72 !important; }
+html[data-gr-debug] [data-gr-sb] { outline: 1px dashed #3fb950 !important; }
+html[data-gr-debug] [data-gr-cols] { outline: 2px dashed #f0b72f !important; }
+html[data-gr-debug] :is([data-gr-pane], [data-gr-mergebox], [data-gr-desc]) { outline: 2px dashed #ff7b72 !important; }
+html[data-gr-debug] :is(#gr-cockpit, #gr-panel) { outline: 2px dashed #3fb950 !important; }
+html[data-gr-debug] :is([data-gr-state-pill], [data-gr-branch], [data-gr-pr-title]) { outline: 1px dotted #f0b72f !important; }
+html[data-gr-debug] [data-gr-row]::after {
+  content: attr(data-gr-state);
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font: 600 10px/1 ui-monospace, monospace;
+  color: #58a6ff;
+}
+html[data-gr-debug] [data-gr-row][data-gr-bot]::after { content: attr(data-gr-state) " · bot"; }
+
+/* Conversa clássica movida para o modal: a caixa de resposta e o "Resolve" do GitHub
+   ficam escondidos (continuam funcionando por trás do nosso campo). */
+#gr-modal .gr-mbody :is(.review-thread-reply, .js-inline-comment-form-container, .js-resolvable-thread-toggler-container, .js-toggle-inline-comment-form) { display: none !important; }
+
+/* Cabeçalho do PR: título e ações (Preview, Code, sino) sempre na mesma linha.
+   Em telas médias o GitHub joga as ações para uma linha própria acima do título. 
+   (Só a partir de 768px: no celular o título precisa da largura toda.) */
+@media (min-width: 768px) {
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] {
+  grid-template-columns: minmax(0, 1fr) auto !important; grid-template-areas: none !important; column-gap: 16px !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > [class*="prc-PageHeader-TitleArea-"] { grid-column: 1 !important; grid-row: 1 !important; }
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > [class*="prc-PageHeader-Actions-"] {
+  grid-column: 2 !important; grid-row: 1 !important; width: auto !important; align-self: start !important; margin-top: 0;
+}
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > [class*="prc-PageHeader-Actions-"] > * { flex: none !important; }
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > :not([class*="prc-PageHeader-TitleArea-"]):not([class*="prc-PageHeader-Actions-"]) { grid-column: 1 / -1 !important; }
+}
+
+/* Topo da PR mais enxuto: menos espaço entre título, metadados e abas */
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 12px !important; }
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-Description-"] { padding-top: 4px !important; }
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-Navigation-"] { padding-top: 4px !important; }
+#gr-panel .gr-empty-acts { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+/* Título + #número + copiar + lápis fluem como texto: o lápis vem logo depois do
+   título (na mesma linha do fim do título), nunca isolado no canto. */
+html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] [class*="titleWithAction"] { display: block !important; }
+html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] [class*="titleWithAction"] > :first-child { display: inline !important; }
+html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] [class*="titleSuffix"] { display: inline-flex !important; vertical-align: middle; margin-left: 2px; position: relative; top: -2px; }
+
+/* Painel "Activity" do GitHub (lateral direita): menos ruído visual.
+   Links sem sublinhado, mensagens de commit sem fonte mono, texto menor e linhas mais juntas. */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] {
+  font-size: 13px;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] a { text-decoration: none !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] a:hover { text-decoration: underline !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] :is(code, tt, .text-mono, [class*="mono"]) {
+  font-family: inherit !important; font-size: inherit !important; background: none !important; padding: 0 !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] :is(li, [role="listitem"]) { padding-top: 4px !important; padding-bottom: 4px !important; }
+/* Linhas do Activity: quem fez em destaque, o que fez em cinza, uma linha por evento */
+html[data-gr-accent] [class*="activityItem"] { padding: 5px 0 !important; }
+html[data-gr-accent] [class*="EventText"] {
+  display: block !important; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fgColor-muted) !important;
+}
+html[data-gr-accent] [class*="EventText"] a:not([class*="author"]) { color: var(--fgColor-muted) !important; font-weight: 400 !important; }
+html[data-gr-accent] [class*="EventText"] a:not([class*="author"]):hover { color: var(--fgColor-default) !important; }
+html[data-gr-accent] [class*="EventText"] [class*="author"] strong { font-weight: 600; }
+html[data-gr-accent] [class*="EventText"] strong:not([class*="author"] strong) { font-weight: 500; color: var(--fgColor-muted) !important; }
+html[data-gr-accent] [class*="EventText"] img { width: 16px !important; height: 16px !important; }
+html[data-gr-accent] [class*="EventText"] [data-component="Label"], html[data-gr-accent] [class*="EventText"] [class*="Label"] { font-size: 10px !important; padding: 0 5px !important; line-height: 14px !important; }
+html[data-gr-accent] [class*="activityBadge"] { opacity: 0.55; }
+html[data-gr-accent] [class*="activityActions"] relative-time, html[data-gr-accent] [class*="timestamp"] { font-size: 12px !important; color: var(--fgColor-muted) !important; }
+
+/* Painéis laterais do GitHub (Comments, Activity): abrem como gaveta à direita,
+   por cima da página (com fundo escurecido), em vez de virar uma terceira coluna. */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"]) {
+  position: fixed !important; z-index: 150 !important;
+  top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important;
+  width: min(600px, 100vw) !important; max-width: none !important; max-height: none !important; height: auto !important;
+  overflow: auto !important; overscroll-behavior: contain;
+  border-left: 1px solid var(--borderColor-default); border-radius: 0;
+  background: var(--bgColor-default) !important;
+  box-shadow: -24px 0 64px rgb(0 0 0 / 0.45), 0 0 0 100vmax rgb(1 4 9 / 0.3);
+  animation: gr-drawer-in 0.2s ease-out;
+}
+@keyframes gr-drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] { animation: none !important; }
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] > [class*="VerticalDivider"] { display: none !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]) > [class*="prc-PageLayout-Sidebar-"] {
+  width: 100% !important; max-width: none !important; min-width: 0 !important; flex: 1 1 auto !important;
+}
+
+/* Título da PR: 24px também pela estrutura do Primer (o atributo data-gr-pr-title
+   pode se perder quando o React redesenha o título) e quebra equilibrada, para
+   não sobrar uma palavra sozinha na segunda linha. */
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, [class*="prc-Heading"]) {
+  font-size: 24px !important; line-height: 32px !important; font-weight: 600 !important; letter-spacing: -0.02em;
+}
+/* O texto do título vem num <span class="f1"> (32px) dentro do h1: herda os 24px. */
+html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2) :is(.f1, .f2, .f3, [class*="prc-Text"]) {
+  font-size: inherit !important; line-height: inherit !important; font-weight: inherit !important; letter-spacing: inherit !important;
+}
+
+/* Conteúdo da gaveta: respiro e ritmo de 4px (cabeçalho, filtros, cartões de conversa) */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] { padding: 4px 8px 24px !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] article { border-radius: 12px !important; margin-bottom: 12px !important; overflow: hidden; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [data-component="SegmentedControl"] { margin-bottom: 4px; }
+
+/* Gaveta: o seletor All / Unresolved / Mine do GitHub no mesmo estilo das nossas abas */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-SegmentedControl-"] {
+  height: auto !important; gap: 4px; padding: 4px !important;
+  border: 1px solid var(--borderColor-muted) !important; border-radius: 12px !important; background: var(--bgColor-default) !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"] {
+  border: 0 !important; background: none !important; margin: 0 !important; height: 32px !important;
+}
+/* sem os divisores verticais do Primer */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"]::before,
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"]::after { display: none !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"] {
+  --separator-color: transparent !important;
+  height: 32px !important; padding: 0 12px !important; border: 0 !important; border-radius: 8px !important;
+  background: none !important; color: var(--fgColor-muted) !important; font: 500 12.5px var(--fontStack-sansSerif, sans-serif) !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:hover { color: var(--fgColor-default) !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"][aria-pressed="true"],
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [data-selected] > [class*="prc-SegmentedControl-Button-"] {
+  background: var(--bgColor-neutral-muted, #262c36) !important; color: var(--fgColor-default) !important; font-weight: 600 !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"] [class*="prc-SegmentedControl-Content-"] { padding: 0 !important; gap: 8px; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Counter-"],
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-"] [class*="CounterLabel"],
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-"] [data-component="CounterLabel"] {
+  min-width: 20px; padding: 0 6px !important; border: 0 !important; border-radius: 999px !important;
+  background: var(--bgColor-muted) !important; color: inherit !important; font: 600 11px/18px var(--fontStack-sansSerif, sans-serif) !important; font-variant-numeric: tabular-nums;
+}
+/* "Showing 4 of 6 review comments" mais discreto */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] { font-size: 13px; }
+/* Com uma gaveta aberta (painel do GitHub ou conversa), o índice "Contents" sai de cena */
+html:has([class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])) #gr-toc,
+html:has(#gr-modal) #gr-toc { display: none !important; }
+
+/* Gaveta Comments: linha de controles mais leve. Seletor ocupa o espaço, botões de
+   filtro/ordem viram ícones discretos (sem caixa) como os do cabeçalho. */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="container__GZ"] { gap: 8px; align-items: center; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="viewSwitch"] { flex: 1; min-width: 0; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="controls__"] { gap: 2px; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="controls__"] [data-component="IconButton"] {
+  width: 32px !important; height: 32px !important; border: 0 !important; border-radius: 8px !important; background: none !important; box-shadow: none !important; color: var(--fgColor-muted) !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="controls__"] [data-component="IconButton"]:hover,
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="controls__"] [data-component="IconButton"][aria-expanded="true"] {
+  background: var(--bgColor-neutral-muted, #262c36) !important; color: var(--fgColor-default) !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-SegmentedControl-"] { align-items: center; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"] { display: flex; align-items: center; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"] { display: inline-flex !important; align-items: center !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Content-"] { display: inline-flex !important; align-items: center !important; height: auto !important; }
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Text-"] { line-height: 20px !important; }
+/* Hover do Primer pinta só o miolo (Content) e fica "encaixado" no texto: tiramos
+   esse fundo e o hover passa a ocupar o botão inteiro, como nas nossas abas. */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Content-"],
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:hover [class*="prc-SegmentedControl-Content-"],
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:active [class*="prc-SegmentedControl-Content-"] {
+  background: none !important; padding: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:not([aria-pressed="true"]):hover {
+  background: color-mix(in srgb, var(--bgColor-neutral-muted, #262c36) 60%, transparent) !important;
+}
+/* Contador de "Unresolved": destaque (é o que falta resolver), igual ao "Open" do nosso painel */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Counter-"] [data-component="CounterLabel"] {
+  background: var(--bgColor-attention-emphasis, #9e6a03) !important; color: #fff !important;
+}
+
+/* Ruído da Overview: aviso "Looking for an old friend?" e o resumo de Activity da barra lateral */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) :is([data-gr-oldfriend], [data-gr-activity]) { display: none !important; }
+
+/* Celular (empilhado): a barra lateral do GitHub no fim vira um bloco "Details" compacto */
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] {
+  margin-top: 24px !important; padding: 16px !important; border: 1px solid var(--borderColor-muted); border-radius: 12px; background: var(--bgColor-muted);
+}
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane]::before {
+  content: "Details"; display: block; margin-bottom: 8px; font: 600 16px var(--fontStack-sansSerif, sans-serif); color: var(--fgColor-default);
+}
+/* Contador: só a pílula amarela, sem a "caixa" escura do wrapper em volta */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Counter-"] {
+  background: none !important; padding: 0 !important; min-width: 0 !important; border: 0 !important; display: inline-flex !important;
+}
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Counter-"] [data-component="CounterLabel"] {
+  min-width: 20px; padding: 0 6px !important; border: 0 !important; border-radius: 999px !important;
+  font: 600 11px/18px var(--fontStack-sansSerif, sans-serif) !important; text-align: center;
+}
+
+/* Cabeçalho único (título à vista): a barra fixa não repete número/título,
+   e Preview / Code / sino sobem para a linha dela (posição calculada em content.js). */
+html[data-gr-one-header] [class*="miniHeaderInner"] [class*="metadata__"] { visibility: hidden; }
+/* fora do fluxo: o título usa a largura toda da linha */
+html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-Actions-"] { position: absolute !important; top: 0; right: 0; z-index: 120; opacity: 0 !important; pointer-events: none !important; }
+html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { position: relative; }
+html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > [class*="prc-PageHeader-TitleArea-"] { grid-column: 1 / -1 !important; }
+
+/* Copiar link, ao lado do título */
+.gr-copy-link { display: none; }
+html[data-gr-accent] .gr-copy-link {
+  display: inline-grid; place-items: center; width: 28px; height: 28px; margin-left: 6px; vertical-align: middle; position: relative; top: -1px;
+  border: 0; border-radius: 8px; background: none; color: var(--fgColor-muted); cursor: pointer;
+}
+html[data-gr-accent] .gr-copy-link:hover { background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-default); }
+html[data-gr-accent] .gr-copy-link.gr-done { color: var(--fgColor-success, #3fb950); }
+
+/* Gaveta aberta (conversa ou painel do GitHub): a página atrás não rola; o foco é a gaveta */
+html:has(#gr-modal),
+html[data-gr-accent]:has([class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])) {
+  overflow: hidden !important; scrollbar-gutter: stable;
+}
+#gr-modal { overscroll-behavior: contain; }
+#gr-modal .gr-mbody { overscroll-behavior: contain; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] { flex-direction: column !important; align-self: flex-start; }
+/* Empilhado (abaixo de 1120px): força uma coluna só, como no celular. A barra
+   lateral do GitHub vai para o fim da página como bloco "Details", em vez de
+   aparecer espremida à direita sem a aba Details selecionada. */
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-cols] { flex-direction: column !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] {
+  width: 100% !important; max-width: none !important; flex: none !important; position: static !important; align-self: stretch !important;
+}
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] > * { width: 100% !important; max-width: none !important; position: static !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] [class*="VerticalDivider"] { display: none !important; }
+
+/* Menu "Actions" na barra fixa: substitui Preview, Code, sino e os botões de painel */
+html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] :is([class*="divider__"], [class*="panelToggle"], [data-docked-panel-toggle]) { display: none !important; }
+html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] > div:has(> [class*="panelToggle"]) { display: none !important; }
+.gr-am-btn {
+  display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 12px; margin-left: 4px;
+  border: 1px solid var(--borderColor-default); border-radius: 6px; background: var(--bgColor-neutral-muted, #262c36);
+  color: var(--fgColor-default); font: 500 12px var(--fontStack-sansSerif, sans-serif); cursor: pointer;
+}
+.gr-am-btn:hover { border-color: var(--fgColor-muted); }
+.gr-am {
+  position: fixed; z-index: 400; min-width: 240px; padding: 4px; display: flex; flex-direction: column;
+  border: 1px solid var(--borderColor-default); border-radius: 12px; background: var(--overlay-bgColor, var(--bgColor-default));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.35); font: 13px var(--fontStack-sansSerif, sans-serif);
+}
+.gr-am-item { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 7px 10px; border: 0; border-radius: 8px; background: none; color: var(--fgColor-default); text-align: left; cursor: pointer; font: inherit; }
+.gr-am-item:hover { background: var(--bgColor-neutral-muted, #262c36); }
+.gr-am-item em { font-style: normal; color: var(--fgColor-muted); font-size: 11.5px; font-family: var(--fontStack-monospace, ui-monospace, monospace); }
+.gr-am-sep { margin: 4px 6px; border: 0; border-top: 1px solid var(--borderColor-muted); }
+
+/* PR fechada/mergeada: o GitHub já mostra o cartão "Merged / Restore branch / Revert";
+   o cockpit vazio não ocupa espaço. */
+#gr-cockpit:empty { display: none !important; }
+
+/* Estado vazio do painel */
+#gr-panel .gr-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; padding: 32px 16px;
+  border: 1px dashed var(--borderColor-muted); border-radius: 12px; text-align: center; color: var(--fgColor-muted);
+}
+#gr-panel .gr-empty b { color: var(--fgColor-default); font-size: 14px; font-weight: 600; }
+#gr-panel .gr-empty p { margin: 0; font-size: 12.5px; max-width: 260px; }
+#gr-panel .gr-eicon {
+  display: grid; place-items: center; width: 36px; height: 36px; margin-bottom: 8px; border-radius: 50%;
+  background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-muted); font-size: 16px;
+}
+#gr-panel .gr-empty[data-kind="open"] .gr-eicon { background: color-mix(in srgb, var(--fgColor-success, #3fb950) 16%, transparent); color: var(--fgColor-success, #3fb950); }
+#gr-panel .gr-empty-acts { display: flex; gap: 16px; margin-top: 12px; }
+#gr-panel .gr-elink { border: 0; background: none; padding: 0; color: var(--fgColor-accent); font: 500 12.5px var(--fontStack-sansSerif, sans-serif); cursor: pointer; }
+#gr-panel .gr-elink:hover { text-decoration: underline; }
+
+/* Barra fixa sempre igual ao rolar: o GitHub troca o conteúdo dela conforme a
+   rolagem (aparecem o menu de seções "☰▾" e a pílula de estado), o que faz o
+   título pular para o lado. Mantemos só "#número título copiar" + ações. */
+html[data-gr-accent] [class*="miniHeaderInner"] > :not([class*="metadata__"]):not([class*="actions__"]) { display: none !important; }
+html[data-gr-accent] [class*="miniHeaderInner"] :is([data-component="StateLabel"], [class*="StateLabel"], [class*="stateLabel"]) { display: none !important; }
+html[data-gr-accent] [class*="miniHeaderInner"] [class*="metadata__"] > :not([class*="number__"]):not([class*="title__"]):not(button):not([role="tooltip"]):not([class*="Tooltip"]) { display: none !important; }
+
+/* Barra fixa sem ocupar espaço: fica por cima do conteúdo e só aparece (fundo,
+   título) depois que o título da PR sai da tela. No topo da página, só os botões
+   dela aparecem, na linha do título. */
+@media (min-width: 768px) {
+  html[data-gr-actions-menu] [class*="stickyHeader__"][class*="StickyHeaderSlot"] { height: 0 !important; min-height: 0 !important; overflow: visible !important; z-index: 110; }
+  html[data-gr-actions-menu] [class*="stickyHeader__"][class*="StickyHeaderSlot"] > * { position: absolute !important; top: 0; left: 0; right: 0; }
+  html[data-gr-one-header] [class*="StickyHeaderSlotBar"],
+  html[data-gr-one-header] [class*="miniHeaderInner"] { background: transparent !important; border-color: transparent !important; box-shadow: none !important; pointer-events: none; }
+  html[data-gr-one-header] [class*="miniHeaderInner"] [class*="actions__"] { pointer-events: auto; }
+  html[data-gr-one-header] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] { padding-right: var(--gr-bar-acts-w, 320px) !important; }
+  /* espaço no topo que a barra ocupava: o título encosta mais em cima */
+  html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 16px !important; }
+}
+
+/* Saldo de linhas (+N net) ao lado do diffstat */
+.gr-net {
+  display: inline-flex; align-items: center; margin-left: 8px; padding: 0 7px; height: 20px; vertical-align: middle;
+  border-radius: 999px; font: 600 11.5px var(--fontStack-monospace, ui-monospace, monospace);
+  color: var(--fgColor-attention, #d29922); background: color-mix(in srgb, var(--fgColor-attention, #d29922) 14%, transparent);
+}
+.gr-net[data-sign="down"] { color: var(--fgColor-done, #a371f7); background: color-mix(in srgb, var(--fgColor-done, #a371f7) 14%, transparent); }
+.gr-net[data-sign="zero"] { color: var(--fgColor-muted); background: var(--bgColor-neutral-muted, #262c36); }
+
+/* Botões primários do GitHub sempre na cor de destaque (inclusive em modais e
+   portais, que redefinem os tokens do Primer, e no estado pressionado). */
+html[data-gr-theme] :is(button, a, summary)[data-variant="primary"],
+html[data-gr-theme] :is(.btn-primary, .Button--primary) {
+  background: var(--gr-accent-strong, var(--gr-accent)) !important; border-color: transparent !important; color: #fff !important;
+}
+html[data-gr-theme] :is(button, a, summary)[data-variant="primary"]:is(:hover, :active, [aria-expanded="true"]),
+html[data-gr-theme] :is(.btn-primary, .Button--primary):is(:hover, :active) {
+  background: var(--gr-accent) !important;
+}
+html[data-gr-theme] :is(button, a)[data-variant="primary"]:disabled,
+html[data-gr-theme] :is(button, a)[data-variant="primary"][aria-disabled="true"] { opacity: 0.55; }
+
+/* PR mergeada/fechada: "Submit review" sai da barra (continua no menu Actions) */
+html[data-gr-pr-done] [class*="miniHeaderInner"] [class*="actions__"] [class*="ReviewMenuButton"] { display: none !important; }
+
+/* Painel sempre colado à direita na linha das colunas, mesmo se a coluna
+   principal ainda estiver vazia. */
+#gr-panel:not([data-stacked]) { margin-left: auto !important; }
+/* com margin-left:auto, o espaço entre coluna e painel vem do gap */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-stacked]) [data-gr-cols] { column-gap: 24px !important; }
+
+/* ===== Aba Details (barra lateral do GitHub mostrada no painel) ===== */
+/* Mesma largura do painel nas outras abas: nada empurra a coluna principal */
+html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar]:not([data-gr-stacked]) [data-gr-pane] {
+  margin-left: 0 !important; --pane-width: var(--gr-pw) !important;
+  width: var(--gr-pw) !important; min-width: 0 !important; max-width: var(--gr-pw) !important;
+}
+html[data-gr-show-sidebar] [data-gr-pane] [class*="VerticalDivider"],
+html[data-gr-show-sidebar] [data-gr-pane] [class*="DraggableHandle"] { display: none !important; }
+html[data-gr-show-sidebar] [data-gr-pane] :is([class*="prc-PageLayout-Pane-"], [data-testid="sticky-sidebar"]) { width: 100% !important; max-width: none !important; min-width: 0 !important; }
+
+/* Seções compactas: linha única "Nome .......... valor" quando vazia */
+html[data-gr-accent] [data-overview-sidebar-item] {
+  margin: 0 !important; padding: 10px 2px !important; min-height: 0 !important; border: 0 !important;
+  border-top: 1px solid var(--borderColor-muted) !important; background: none !important;
+}
+html[data-gr-accent] [data-overview-sidebar-item]:first-of-type { border-top: 0 !important; }
+html[data-gr-accent] [data-overview-sidebar-item] > h4,
+html[data-gr-accent] [data-overview-sidebar-item] [class*="disclosureHeading"] { margin: 0 !important; padding: 0 !important; min-height: 0 !important; }
+html[data-gr-accent] [data-overview-sidebar-item] [class*="disclosureHeader"] {
+  display: flex !important; align-items: center; justify-content: space-between; width: 100%;
+  min-height: 24px !important; height: auto !important; padding: 0 !important; margin: 0 !important; background: none !important;
+}
+html[data-gr-accent] [data-overview-sidebar-item] [class*="sectionTitle"] { font: 600 13px/20px var(--fontStack-sansSerif, sans-serif) !important; color: var(--fgColor-default) !important; }
+html[data-gr-accent] [data-overview-sidebar-item] [class*="body__"] { margin: 6px 0 0 !important; padding: 0 !important; }
+html[data-gr-accent] [data-overview-sidebar-item] [class*="disclosureHeader"] svg { width: 14px; height: 14px; opacity: 0; transition: opacity 0.15s; color: var(--fgColor-muted); }
+html[data-gr-accent] [data-overview-sidebar-item]:hover [class*="disclosureHeader"] svg { opacity: 1; }
+
+/* vazias: título cinza à esquerda, "None yet" à direita, na mesma linha */
+html[data-gr-accent] [data-overview-sidebar-item]:has([class*="emptyState"]):not(:has(li, img, [data-component="Label"])) {
+  display: flex !important; align-items: center; gap: 12px; padding: 8px 2px !important;
+}
+html[data-gr-accent] [data-overview-sidebar-item]:has([class*="emptyState"]):not(:has(li, img, [data-component="Label"])) > h4 { flex: 1; min-width: 0; }
+html[data-gr-accent] [data-overview-sidebar-item]:has([class*="emptyState"]):not(:has(li, img, [data-component="Label"])) [class*="sectionTitle"] { font-weight: 500 !important; color: var(--fgColor-muted) !important; }
+html[data-gr-accent] [data-overview-sidebar-item]:has([class*="emptyState"]):not(:has(li, img, [data-component="Label"])) [class*="body__"] { margin: 0 !important; flex: none; }
+html[data-gr-accent] [data-overview-sidebar-item] [class*="emptyState"] { font-size: 12.5px !important; line-height: 20px !important; color: var(--fgColor-muted) !important; padding: 0 !important; margin: 0 !important; }
+html[data-gr-accent] [data-overview-sidebar-item] [class*="emptyState"] a { color: var(--fgColor-muted) !important; }
+html[data-gr-accent] [data-overview-sidebar-item] [class*="emptyState"] a:hover { color: var(--fgColor-default) !important; }
+
+/* listas (revisores etc.) mais densas */
+html[data-gr-accent] [data-overview-sidebar-item] li { min-height: 28px !important; padding-block: 2px !important; }
+html[data-gr-accent] [data-overview-sidebar-item] img[class*="Avatar"], html[data-gr-accent] [data-overview-sidebar-item] [data-component="Avatar"] { width: 20px !important; height: 20px !important; }
+
+/* Empilhado: commits vão para o fim da coluna (depois das conversas), sem vão grande */
+html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) { display: flex !important; flex-direction: column !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) > * { order: 0; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) > :is(section:has(#overview-comments), :has(> section #overview-comments)) { order: 10 !important; margin: 8px 0 0 !important; padding-bottom: 0 !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) section:has(#overview-comments) { margin-bottom: 0 !important; padding-bottom: 0 !important; min-height: 0 !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin: 24px 0 8px !important; }
+
+/* Celular/empilhado: a barra lateral do GitHub só aparece na aba Details, logo
+   abaixo das abas (os commits continuam abaixo). */
+html[data-gr-stacked]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar]) [data-gr-pane] { display: none !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin-bottom: 0 !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] {
+  display: flex !important; margin-top: -8px !important; padding: 4px 16px 8px !important; border: 0 !important; background: none !important;
+}
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane]::before { content: none !important; display: none !important; }
+html[data-gr-stacked] #gr-panel[data-stacked] .gr-details:empty { display: none; }
+/* Índice "Contents" não aparece no celular */
+@media (max-width: 899.98px) { #gr-toc { display: none !important; } }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane],
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] > *,
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] [data-testid="sticky-sidebar"] {
+  width: 100% !important; max-width: none !important; flex: 1 1 auto !important; --pane-width: 100% !important;
+}
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane],
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] * { padding-left: 0 !important; padding-right: 0 !important; margin-left: 0 !important; }
+html[data-gr-accent] [data-overview-sidebar-item][data-gr-sb] { padding-top: 8px !important; padding-bottom: 8px !important; }
+html[data-gr-accent] :has(> [data-overview-sidebar-item]) { gap: 0 !important; row-gap: 0 !important; }
+
+/* Celular: a barra fixa mostra só Status · Review · Actions enquanto o título está à vista */
+@media (max-width: 767.98px) {
+  html[data-gr-one-header] [class*="miniHeaderInner"] { justify-content: flex-end !important; }
+  html[data-gr-one-header] [class*="miniHeaderInner"] [class*="metadata__"] { display: none !important; }
+  .gr-am-btn { height: 32px; }
+  html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 12px !important; }
+  /* título um pouco menor no celular */
+  html[data-gr-accent][data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, [class*="prc-Heading"]) { font-size: 20px !important; line-height: 28px !important; }
+}
+
+/* Commits da Overview: lista densa (o GitHub dá ~16px de folga em cada item) */
+html[data-gr-accent] [data-testid="timeline-item"][data-item-type="commits"] { padding-block: 0 !important; margin-block: 0 !important; min-height: 0 !important; }
+html[data-gr-accent] :has(> [data-testid="timeline-item"][data-item-type="commits"]) { gap: 0 !important; row-gap: 0 !important; }
+html[data-gr-accent] [data-testid="timeline-commit-group"] { padding-block: 2px !important; margin: 0 !important; }
+html[data-gr-accent] [data-testid="timeline-commit-row"] { min-height: 28px !important; padding-block: 3px !important; margin: 0 !important; gap: 8px; }
+html[data-gr-accent] [data-testid="timeline-commit-row"] [class*="Title__"] { font-size: 13px !important; line-height: 20px !important; }
+html[data-gr-accent] [data-testid="timeline-commit-row"] :is(code, [class*="sha"], [class*="Sha"]) { font-size: 12px !important; }
+/* commits: uma linha por commit (título truncado), sem quebra no mobile */
+html[data-gr-accent] [data-testid="timeline-commit-row"] { padding-block: 2px !important; min-height: 28px !important; align-items: center !important; }
+html[data-gr-accent] [data-testid="timeline-commit-row"] [class*="Title__"] { flex: 1 1 auto; min-width: 0; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+/* Celular + aba Details: a barra lateral do GitHub fica logo abaixo das abas e os
+   commits continuam depois dela. Os invólucros viram display:contents para que
+   tudo seja irmão no mesmo flex e o "order" funcione (sem mover nós do React). */
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-PageLayoutContent-"]:has(#gr-panel[data-stacked]) { row-gap: 0 !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-ContentWrapper-"]:has(#gr-panel[data-stacked]),
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"]:has(#gr-panel[data-stacked]),
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) { display: contents !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) > :not(#gr-panel, [data-gr-pane]):not(:empty) { margin-bottom: 24px !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin-bottom: 8px !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] { order: 5 !important; margin-bottom: 16px !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) > section:has(#overview-comments) { order: 10 !important; margin-bottom: 0 !important; }
+
+/* Busca da lista de PRs (query builder): valores dos filtros só coloridos, sem a
+   "caixinha" de fundo que ficava cortada e desalinhada com o texto. */
+html[data-gr-accent] :is(query-builder, [class*="QueryBuilder"], [data-testid*="query-builder"]) :is(.qb-filter-value, .qb-entity, .qb-constant, [class*="filterValue"], [class*="FilterValue"], [class*="qualifierValue"]) {
+  background: transparent !important; box-shadow: none !important; border-radius: 0 !important;
+}
+
+/* Lista: filtro Open/Closed ativo com o mesmo visual das nossas abas (fundo + contador em acento) */
+html[data-gr-accent] [data-gr-state-tab] {
+  display: inline-flex !important; align-items: center; gap: 6px; padding: 4px 10px !important; border-radius: 8px !important;
+  color: var(--fgColor-muted) !important; text-decoration: none !important; transition: background .12s, color .12s;
+}
+html[data-gr-accent] [data-gr-state-tab]:hover { background: var(--bgColor-neutral-muted) !important; color: var(--fgColor-default) !important; }
+html[data-gr-accent] [data-gr-state-tab][data-gr-sel] {
+  background: var(--bgColor-neutral-muted) !important; color: var(--fgColor-default) !important; font-weight: 600 !important;
+  box-shadow: inset 0 -2px 0 var(--gr-accent);
+}
+html[data-gr-accent] [data-gr-state-tab][data-gr-sel] :is([class*="Counter"], [class*="counter"], .Counter) {
+  background: var(--bgColor-accent-muted) !important; color: var(--fgColor-accent) !important;
+}
+
+/* Janelas de checks do GitHub: gaveta à direita (mesmo padrão das conversas) */
+html[data-gr-accent] [data-gr-drawer] {
+  position: fixed !important; inset: 0 0 0 auto !important; top: 0 !important; right: 0 !important; left: auto !important; bottom: 0 !important;
+  width: min(600px, 100vw) !important; max-width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important;
+  margin: 0 !important; transform: none !important; border-radius: 0 !important; z-index: 200 !important;
+  display: flex !important; flex-direction: column !important; overflow: auto !important;
+  border: 0 !important; border-left: 1px solid var(--borderColor-default) !important; background: var(--bgColor-default) !important;
+  box-shadow: -24px 0 64px rgb(0 0 0 / 0.45), 0 0 0 100vmax rgb(1 4 9 / 0.3) !important;
+  animation: gr-drawer-in 0.2s ease-out;
+}
+@media (prefers-reduced-motion: reduce) { html[data-gr-accent] [data-gr-drawer] { animation: none; } }
+/* a página não rola por trás da gaveta */
+html[data-gr-accent]:has([data-gr-drawer]) { overflow: hidden !important; }
+
+/* Files changed: linhas "@@ … @@" discretas (antes azul forte + roxo), sem competir com o código */
+html[data-gr-accent][data-color-mode][data-light-theme][data-dark-theme] {
+  --diffBlob-hunkLine-bgColor: color-mix(in srgb, var(--fgColor-muted, #9198a1) 8%, transparent);
+  --diffBlob-hunkNum-bgColor-rest: color-mix(in srgb, var(--fgColor-muted, #9198a1) 12%, transparent);
+  --diffBlob-hunkNum-bgColor-hover: color-mix(in srgb, var(--gr-accent, #8b7cf6) 30%, transparent);
+  --diffBlob-hunkLine-fgColor: var(--fgColor-muted);
+  --diffBlob-hunkNum-fgColor-rest: var(--fgColor-muted);
+  --diffBlob-hunkNum-fgColor-hover: var(--fgColor-default);
+}
+html[data-gr-accent] td.diff-hunk-cell { background: color-mix(in srgb, var(--fgColor-muted, #9198a1) 7%, transparent) !important; color: var(--fgColor-muted) !important; }
+html[data-gr-accent] tr:has(> td.diff-hunk-cell) td:not(.diff-hunk-cell),
+html[data-gr-accent] tr:has(> td.diff-hunk-cell) :is(button, [class*="expand"], [class*="Expand"]) { background: color-mix(in srgb, var(--fgColor-muted, #9198a1) 10%, transparent) !important; color: var(--fgColor-muted) !important; }
+html[data-gr-accent] tr:has(> td.diff-hunk-cell) :is(button, [class*="expand"], [class*="Expand"]):hover { background: color-mix(in srgb, var(--gr-accent) 25%, transparent) !important; color: var(--fgColor-default) !important; }
+
+/* Files changed / Commits / Checks: o conteúdo ocupa a tela toda, então o cabeçalho
+   (título, abas) também, alinhado à mesma margem esquerda do conteúdo. */
+html[data-gr-fullpage] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { max-width: none !important; margin-inline: 0 !important; }
+
+/* Overview também na largura toda (mesmo padrão de Files changed): colunas sem a
+   caixa de 1356px; painel mantém a largura de sempre. */
+html[data-gr-fullpage][data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] { max-width: none !important; margin-inline: 0 !important; }
+/* O GitHub foca o título ao trocar de aba: sem o contorno branco em volta dele */
+html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, a):focus:not(:focus-visible),
+html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2)[tabindex="-1"]:focus { outline: none !important; box-shadow: none !important; }
+@media (min-width: 768px) {
+  html[data-gr-fullpage][data-gr-actions-menu][data-gr-accent] [class*="miniHeaderInner"] { padding-left: var(--gr-pad-l, 24px) !important; padding-right: var(--gr-pad-r, 24px) !important; max-width: none !important; }
+}
+
+/* ---------- Painel Merge status (gaveta à direita) ---------- */
+/* ocupa a altura toda da gaveta (o GitHub fixa um max-height calculado) */
+html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] > .height-full { max-height: none !important; height: 100% !important; }
+/* seções: menos altura, ícone menor e alinhado ao título */
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section [class*="wrapper"] { padding: 12px 16px !important; align-items: center; }
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 { margin-right: 12px !important; align-self: flex-start; margin-top: 2px; }
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 > div,
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 > div > div,
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 > div > svg { width: 24px !important; height: 24px !important; }
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 svg.octicon { width: 14px !important; height: 14px !important; }
+html[data-gr-accent] [data-testid="mergebox-border-container"] [class*="MergeBoxSectionHeading"] { font-size: 14px !important; line-height: 20px !important; font-weight: 600 !important; }
+html[data-gr-accent] [data-testid="mergebox-border-container"] > section [class*="contentLayout"] p { font-size: 12px !important; line-height: 18px !important; }
+/* "Merging is blocked" que só repete a mensagem de outra seção: fica só o título */
+html[data-gr-accent] [data-testid="mergebox-border-container"] li[data-gr-dup] { display: none !important; }
+/* grupos de checks: linhas iguais, marcador colorido por tipo, chevron à direita */
+html[data-gr-accent] [class*="checksContainer"] { padding: 4px 8px 8px !important; }
+html[data-gr-accent] [class*="checksContainer"] [class*="groupHeader"] { display: flex !important; align-items: center; gap: 4px; min-height: 0 !important; padding: 0 !important; }
+html[data-gr-accent] button[data-gr-cg] {
+  flex: 1 1 auto !important; width: 100% !important; height: 32px !important; padding: 0 8px !important; margin: 1px 0 !important;
+  border-radius: 6px !important; color: var(--fgColor-default) !important; font-weight: 500 !important; justify-content: flex-start !important;
+}
+html[data-gr-accent] button[data-gr-cg]:hover { background: var(--bgColor-neutral-muted) !important; }
+html[data-gr-accent] button[data-gr-cg] [class*="prc-Button-ButtonContent"] { display: flex !important; align-items: center; width: 100%; gap: 0; }
+html[data-gr-accent] button[data-gr-cg] [class*="prc-Button-Label"] { display: flex !important; align-items: center; font-size: 13px !important; }
+html[data-gr-accent] button[data-gr-cg] [class*="prc-Button-Label"]::before {
+  content: ""; flex: none; width: 8px; height: 8px; margin-right: 10px; border-radius: 50%; background: var(--gr-cg, var(--fgColor-muted));
+}
+html[data-gr-accent] button[data-gr-cg] [class*="prc-Button-Visual"] { margin-left: auto !important; color: var(--fgColor-muted); }
+html[data-gr-accent] button[data-gr-cg="fail"]     { --gr-cg: var(--fgColor-danger, #f85149); }
+html[data-gr-accent] button[data-gr-cg="pending"]  { --gr-cg: var(--fgColor-attention, #d29922); }
+html[data-gr-accent] button[data-gr-cg="progress"] { --gr-cg: var(--gr-accent); }
+html[data-gr-accent] button[data-gr-cg="skipped"]  { --gr-cg: var(--fgColor-muted); }
+html[data-gr-accent] button[data-gr-cg="neutral"]  { --gr-cg: var(--fgColor-muted); }
+html[data-gr-accent] button[data-gr-cg="success"]  { --gr-cg: var(--fgColor-success, #3fb950); }
+html[data-gr-accent] button[data-gr-cg="progress"] [class*="prc-Button-Label"]::before { box-shadow: 0 0 0 3px color-mix(in srgb, var(--gr-accent) 25%, transparent); }
+/* lista expandida de um grupo: alinhada com os rótulos */
+html[data-gr-accent] [class*="checksContainer"] [class*="expandableListView"] { padding-left: 8px; }
+/* rodapé: "Convert to draft" / "Close pull request" discretos e em linha */
+html[data-gr-accent] [class*="mergePartialContainer"] > .text-small { padding-block: 2px !important; font-size: 12px; }
+
+/* Largura do painel da direita. A coluna principal tem um limite natural (texto em
+   78ch, imagens no tamanho delas): em telas largas, o espaço que sobra vai para o
+   painel (até 720px), em vez de esticar a coluna da esquerda. */
+html { --gr-pw: clamp(320px, 34%, 420px); }
+html[data-gr-fullpage] { --gr-pw: min(720px, max(clamp(320px, 34%, 420px), calc(100% - 984px))); }
+
+/* Revisores no Merge status: grupos (aprovações, pendentes) como linhas e a lista
+   de pessoas logo abaixo, alinhada */
+html[data-gr-accent] [class*="reviewerGroupsContainer"] { padding: 4px 8px 8px !important; }
+html[data-gr-accent] [class*="reviewerGroupsContainer"] button[class*="groupHeadingButton"] {
+  width: 100% !important; height: 32px !important; padding: 0 8px !important; border-radius: 6px !important;
+  justify-content: flex-start !important; color: var(--fgColor-default) !important; font-weight: 500 !important;
+}
+html[data-gr-accent] [class*="reviewerGroupsContainer"] button[class*="groupHeadingButton"]:hover { background: var(--bgColor-neutral-muted) !important; }
+html[data-gr-accent] [class*="reviewerGroupsContainer"] button[class*="groupHeadingButton"] [class*="prc-Button-ButtonContent"] { display: flex !important; width: 100%; }
+html[data-gr-accent] [class*="reviewerGroupsContainer"] button[class*="groupHeadingButton"] [class*="prc-Button-Visual"] { margin-left: auto !important; color: var(--fgColor-muted); }
+html[data-gr-accent] [class*="reviewerGroupsContainer"] [class*="expandableListView"] { padding: 0 0 4px 30px; }
+html[data-gr-accent] [class*="reviewerGroupsContainer"] [class*="expandableListView"] li { min-height: 28px; padding-block: 2px !important; }
+
+/* ---------- Fila de merge (/queue/<branch>) ---------- */
+/* largura toda, como as páginas da PR */
+html[data-gr-queue][data-gr-accent] main .container-xl { max-width: none !important; padding-inline: 32px !important; }
+html[data-gr-queue][data-gr-accent] main h2.lh-condensed-ultra { font-size: 24px !important; font-weight: 600 !important; margin: 24px 0 16px !important; align-items: center; }
+html[data-gr-queue][data-gr-accent] main h2 .branch-name {
+  font: 500 14px/22px var(--fontStack-monospace, ui-monospace, monospace) !important; padding: 0 8px; border-radius: 6px;
+  background: var(--bgColor-accent-muted); color: var(--fgColor-accent) !important;
+}
+/* lista: cabeçalho discreto e entradas como cartões */
+html[data-gr-queue][data-gr-accent] main .Box { border-radius: 12px !important; overflow: hidden; }
+html[data-gr-queue][data-gr-accent] main .Box-header { padding: 10px 16px !important; font-size: 13px; color: var(--fgColor-muted); }
+html[data-gr-queue][data-gr-accent] main .Box-header .selected { color: var(--fgColor-default); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+html[data-gr-queue][data-gr-accent] main li.Box-row h4 { font-size: 15px !important; }
+/* status da entrada: ícone + texto ("Waiting", "Checking"…) num selo */
+html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label] {
+  width: auto !important; height: 24px !important; padding: 0 10px 0 8px !important; gap: 6px; border-radius: 999px !important;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent) !important; background: color-mix(in srgb, currentColor 12%, transparent) !important;
+  font: 500 12px/22px var(--fontStack-sansSerif, sans-serif); display: inline-flex !important; align-items: center;
+}
+html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label]::after { content: attr(data-gr-label); white-space: nowrap; }
+html[data-gr-queue][data-gr-accent] main li.Box-row .flex-items-start.tmp-mr-3 { min-width: 96px; align-items: center !important; }
+/* estatísticas à direita como cartões */
+html[data-gr-queue][data-gr-accent] main .col-md-3 > .mb-2 {
+  padding: 12px 16px; margin-bottom: 12px !important; border: 1px solid var(--borderColor-muted); border-radius: 12px; background: var(--bgColor-muted);
+}
+html[data-gr-queue][data-gr-accent] main .col-md-3 > .mb-2 > .color-fg-subtle { font-size: 12px; font-weight: 500 !important; color: var(--fgColor-muted) !important; }
+html[data-gr-queue][data-gr-accent] main .col-md-3 .f3 { font-size: 20px !important; }
+html[data-gr-queue][data-gr-accent] main .col-md-3 > hr { display: none; }
+
+/* gaveta nativa (<dialog>): sem o fundo escuro duplo e com rolagem interna */
+html[data-gr-accent] dialog[data-gr-drawer]::backdrop { background: transparent; }
+html[data-gr-accent] dialog[data-gr-drawer] .Overlay-body { flex: 1; overflow: auto; }

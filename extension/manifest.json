@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Refine for GitHub",
+  "short_name": "Refine",
+  "version": "1.0.0",
+  "description": "A cleaner GitHub pull request page: what's left to merge, conversations in a side panel, compact lists and checks.",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://github.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "css": ["src/refine.css"],
+      "js": ["src/settings.js", "src/cockpit.js", "src/content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_title": "Refine for GitHub",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
+  }
+}

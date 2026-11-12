@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Overview do PR: antes e depois</title>
+<style>
+:root {
+  --bg: #0d1117; --bg2: #151b23; --bg3: #212830; --line: #3d444d; --line2: #2a313a;
+  --fg: #f0f6fc; --mut: #9198a1; --acc: #4493f8; --ok: #3fb950; --warn: #d29922; --bad: #f85149; --done: #ab7df8;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans); }
+a { color: var(--acc); text-decoration: none; }
+code { font: 12px var(--mono); background: var(--bg3); padding: 1px 5px; border-radius: 5px; }
+
+/* alternador antes/depois */
+.switcher { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); z-index: 50; display: flex; padding: 3px; gap: 2px;
+  background: #000c; border: 1px solid var(--line); border-radius: 999px; backdrop-filter: blur(8px); }
+.switcher button { border: 0; background: none; color: var(--mut); font: 600 13px var(--sans); padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+.switcher button.on { background: var(--fg); color: var(--bg); }
+body[data-view="antes"] #depois, body[data-view="depois"] #antes { display: none; }
+
+/* cabeçalho do GitHub (comum) */
+.gh-top { height: 64px; border-bottom: 1px solid var(--line2); display: flex; align-items: center; gap: 12px; padding: 0 24px; background: var(--bg); }
+.gh-top .logo { width: 32px; height: 32px; border-radius: 50%; background: var(--fg); }
+.gh-top .crumb { font-size: 14px; } .gh-top .crumb b { font-weight: 600; }
+.gh-nav { display: flex; gap: 22px; padding: 0 24px; border-bottom: 1px solid var(--line2); font-size: 14px; color: var(--fg); }
+
+.gh-nav > span { padding: 10px 0; } .gh-nav > .on { border-bottom: 2px solid #f78166; font-weight: 600; }
+.cnt { display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 6px; font-size: 12px; font-weight: 500; line-height: 18px; text-align: center; background: var(--bg3); border-radius: 999px; color: var(--fg); }
+.av { width: 20px; height: 20px; border-radius: 50%; display: inline-block; flex: none; vertical-align: middle; }
+.a1 { background: linear-gradient(135deg,#6e7681,#c9d1d9); } .a2 { background: linear-gradient(135deg,#1f6feb,#79c0ff); } .a3 { background: linear-gradient(135deg,#8957e5,#d2a8ff); }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg3); color: var(--fg); font: 500 13px var(--sans); cursor: pointer; white-space: nowrap; }
+.btn.pri { background: #238636; border-color: #2ea043; color: #fff; }
+.btn.sm { height: 28px; font-size: 12px; padding: 0 10px; }
+
+/* ===================== ANTES ===================== */
+#antes .sticky { display: flex; align-items: center; gap: 10px; padding: 12px 24px; border-bottom: 1px solid var(--line2); font-size: 14px; }
+#antes .sticky .n { color: var(--mut); }
+#antes .sticky .r { margin-left: auto; display: flex; gap: 8px; }
+#antes .sticky .violet { background: #8957e5; border-color: #8957e5; color: #fff; }
+#antes .head { padding: 28px 24px 0; max-width: 1280px; margin: 0 auto; }
+#antes h1 { font-size: 32px; font-weight: 400; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+#antes .meta { display: flex; align-items: center; gap: 8px; color: var(--mut); flex-wrap: wrap; }
+#antes .state { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-size: 13px; color: var(--ok); }
+#antes .ref { font: 12px var(--mono); background: var(--bg2); border: 1px solid var(--line2); border-radius: 6px; padding: 2px 8px; color: var(--mut); }
+#antes .tabs { display: flex; gap: 28px; margin-top: 22px; border-bottom: 1px solid var(--line2); }
+#antes .tabs > span { padding: 12px 4px; } #antes .tabs > .on { border-bottom: 2px solid #8957e5; font-weight: 600; }
+#antes .cols { display: grid; grid-template-columns: 1fr 296px; gap: 32px; max-width: 1280px; margin: 0 auto; padding: 24px; }
+#antes .card { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; background: var(--bg); }
+#antes .mbox-top { display: flex; align-items: center; gap: 14px; padding: 18px 20px; }
+#antes .mbox-top .ic { width: 36px; height: 36px; border-radius: 50%; background: #9e6a03; flex: none; }
+#antes .mbox-top p { margin: 0; color: var(--mut); font-size: 13px; } #antes .mbox-top b { color: var(--fg); font-size: 16px; display: block; }
+#antes .mbox-top .r { margin-left: auto; display: flex; gap: 8px; }
+#antes .tri { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+#antes .tri > div { padding: 14px 20px; border-left: 1px solid var(--line); font-size: 13px; }
+#antes .tri > div:first-child { border-left: 0; }
+#antes .tri b { font-size: 14px; } #antes .tri span { color: var(--mut); margin-left: 6px; }
+#antes .bar { height: 8px; margin-top: 10px; border-radius: 4px; background: repeating-linear-gradient(45deg, var(--bg3) 0 6px, var(--bg2) 6px 12px); overflow: hidden; display: flex; }
+#antes .bar i { display: block; height: 100%; }
+#antes .desc { padding: 20px 24px; }
+#antes .desc h2 { font-size: 20px; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line2); }
+#antes .desc p { margin: 0 0 16px; }
+#antes .side h3 { font-size: 12px; color: var(--mut); margin: 0 0 6px; display: flex; justify-content: space-between; font-weight: 600; }
+#antes .side .sec { padding: 14px 0; border-bottom: 1px solid var(--line2); font-size: 12px; color: var(--mut); }
+#antes .side .p { display: flex; align-items: center; gap: 8px; color: var(--fg); margin: 6px 0; font-weight: 600; }
+#antes .side .act { color: var(--fg); margin: 8px 0; }
+#antes .side .danger { color: var(--bad); margin: 8px 0; }
+.ann { position: absolute; background: var(--warn); color: #000 !important; margin: 0 !important; font: 700 11px var(--sans); padding: 3px 8px; border-radius: 999px; white-space: nowrap; box-shadow: 0 4px 12px #0008; z-index: 5; }
+.rel { position: relative; }
+
+/* ===================== DEPOIS ===================== */
+#depois .wrap { max-width: 920px; margin: 0 auto; padding: 28px 24px 80px; }
+#depois h1 { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin: 0 0 10px; line-height: 1.25; }
+#depois .num { font: 600 15px var(--mono); color: var(--mut); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; margin-left: 8px; vertical-align: 4px; cursor: pointer; }
+#depois .meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--mut); font-size: 13px; }
+#depois .pill { color: var(--ok); background: #3fb95022; border: 1px solid #3fb95055; border-radius: 999px; padding: 1px 9px; font-weight: 600; font-size: 12px; }
+#depois .ref { font: 12px var(--mono); background: var(--bg3); border-radius: 6px; padding: 1px 7px; color: var(--fg); }
+#depois .people { display: flex; gap: 6px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--mut); flex-wrap: wrap; }
+#depois .chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line2); border-radius: 999px; padding: 2px 8px 2px 3px; color: var(--fg); }
+#depois .chip .av { width: 16px; height: 16px; }
+#depois .ghost { border: 1px dashed var(--line); border-radius: 999px; padding: 2px 8px; color: var(--mut); cursor: pointer; }
+#depois .tabs { display: flex; gap: 22px; margin: 22px 0 24px; border-bottom: 1px solid var(--line2); font-size: 14px; }
+#depois .tabs > span { padding: 10px 0; color: var(--mut); } #depois .tabs > .on { color: var(--fg); font-weight: 600; border-bottom: 2px solid var(--acc); }
+
+.verdict { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.verdict h2 { margin: 0; font-size: 20px; letter-spacing: -0.01em; }
+.verdict p { margin: 2px 0 0; color: var(--mut); font-size: 13px; }
+.steps { display: flex; gap: 4px; margin-left: auto; }
+.steps i { width: 34px; height: 6px; border-radius: 3px; background: var(--bg3); }
+.steps i.ok { background: var(--ok); } .steps i.w { background: var(--warn); }
+
+.todo { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg2); }
+.item { display: grid; grid-template-columns: 22px 1fr auto; gap: 12px; align-items: start; padding: 16px 18px; border-top: 1px solid var(--line2); }
+.item:first-child { border-top: 0; }
+.item .ic { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; margin-top: 1px; }
+.ic.w { background: #d2992226; color: var(--warn); } .ic.ok { background: #3fb95026; color: var(--ok); } .ic.o { border: 1.5px solid var(--mut); }
+.item b { font-size: 14px; } .item .sub { color: var(--mut); font-size: 13px; margin-top: 2px; }
+.item .acts { display: flex; gap: 6px; }
+.threads { grid-column: 2 / 4; margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+.th { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 9px 12px; border: 1px solid var(--line2); border-radius: 8px; background: var(--bg); cursor: pointer; }
+.th:hover { border-color: var(--line); }
+.th .loc { font: 12px var(--mono); color: var(--mut); white-space: nowrap; }
+.th .t { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.th .who { display: flex; align-items: center; gap: 6px; color: var(--mut); font-size: 12px; white-space: nowrap; }
+.th .who .av { width: 16px; height: 16px; }
+.more { color: var(--mut); font-size: 12px; padding: 2px 2px 0; }
+.merge { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); background: var(--bg); }
+.merge .hint { color: var(--mut); font-size: 12px; }
+.merge .r { margin-left: auto; display: flex; gap: 8px; }
+.btn.dis { opacity: 0.45; cursor: not-allowed; }
+
+details.fold { margin-top: 14px; border: 1px solid var(--line2); border-radius: 12px; background: var(--bg); }
+details.fold summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 14px 18px; font-weight: 600; }
+details.fold summary::-webkit-details-marker { display: none; }
+details.fold summary .s { color: var(--mut); font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+details.fold summary::after { content: "›"; margin-left: auto; color: var(--mut); font-size: 18px; transition: transform .15s; }
+details.fold[open] summary::after { transform: rotate(90deg); }
+.fold .body { padding: 0 18px 18px; font-size: 15px; line-height: 1.7; }
+.fold .body h3 { font-size: 16px; margin: 16px 0 4px; } .fold .body p { margin: 0 0 10px; max-width: 74ch; }
+.fold .ev { display: flex; gap: 8px; align-items: center; padding: 6px 0; color: var(--mut); font-size: 13px; border-top: 1px solid var(--line2); }
+.fold .ev:first-child { border-top: 0; }
+.footer-acts { display: flex; gap: 16px; margin-top: 18px; font-size: 12px; color: var(--mut); }
+.footer-acts span { cursor: pointer; } .footer-acts .d { color: var(--bad); }
+</style>
+</head>
+<body data-view="depois">
+
+<div class="switcher"><button data-v="antes">Antes</button><button data-v="depois" class="on">Depois</button></div>
+
+<div class="gh-top"><div class="logo"></div><div class="crumb">BridgLabs / <b>opencodereview</b></div></div>
+<div class="gh-nav"><span>Code</span><span>Issues <span class="cnt">2</span></span><span class="on">Pull requests <span class="cnt">4</span></span><span>Actions</span><span>Projects</span><span>Security and quality</span><span>Insights</span><span>Settings</span></div>
+
+<!-- ============ ANTES: Overview nova do GitHub, como está hoje ============ -->
+<div id="antes">
+  <div class="sticky"><span class="n">#104</span> <b>fix(docker)!: publish the web page on 127.0.0.1 by default</b>
+    <div class="r"><span class="btn sm">● Merge status</span><span class="btn sm violet">Submit review ▾</span></div></div>
+  <div class="head">
+    <h1>fix(docker)!: publish the web page on 127.0.0.1 by default</h1>
+    <div class="meta rel"><span class="state">⟟ Open ▾</span> <span class="av a1"></span> <b style="color:var(--fg)">davidteren</b> opened 7 hours ago
+      <span class="ref">BridgLabs:main</span> ← <span class="ref">davidteren:fix/web-port-loopback</span> <span style="color:var(--ok)">+45</span> <span style="color:var(--bad)">-3</span>
+      <span class="ann" style="left:830px;top:2px">cadê o #104? só no topo, pequeno</span></div>
+    <div class="tabs"><span class="on">Overview</span><span>Commits <span class="cnt">3</span></span><span>Checks <span class="cnt">1</span></span><span>Files changed <span class="cnt">4</span></span></div>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="card rel">
+        <span class="ann" style="right:12px;top:-12px">3 caixas do mesmo peso, nenhuma diz o que fazer</span>
+        <div class="mbox-top"><div class="ic"></div><div><b>Some checks are waiting for approval</b><p>This workflow requires approval from a maintainer. <a>Learn more about approving workflows.</a></p></div>
+          <div class="r"><span class="btn">Approve workflows to run</span><span class="btn">Enable auto-merge (squash) ▾</span></div></div>
+        <div class="tri">
+          <div><b>Checks</b><span>3 workflow approvals pending, 3 requir…</span><div class="bar"><i style="width:25%;background:var(--ok)"></i><i style="width:75%;background:var(--warn)"></i></div></div>
+          <div class="rel"><b>Comments</b><span>4 unresolved ↗</span><div class="bar"><i style="width:33%;background:var(--ok)"></i><i style="width:67%;background:var(--warn)"></i></div>
+            <span class="ann" style="left:150px;top:-10px">quais 4? tem que caçar na timeline</span></div>
+          <div><b>Approvals</b><div class="bar"></div></div>
+        </div>
+      </div>
+      <div class="card desc">
+        <h2>What</h2><p>The OpenCodeReview web page now opens only on the machine that runs it. Before, it was open to every device on the same network.</p>
+        <h2>Why</h2><p>The page hands the app's secret access token to anyone who opens it. So anyone who could reach the page could use the app, including on a shared office network or a server. The README already warned about this and told people to fix it by hand. A safe default is better than a warning.</p>
+        <h2>How</h2><p>The Docker setup now publishes the page on <code>127.0.0.1</code> by default. A new setting, <code>OCR_WEB_BIND</code>, lets people open it to other machines on purpose…</p>
+      </div>
+    </div>
+    <div class="side rel">
+      <span class="ann" style="left:110px;top:258px">metade da coluna é "None yet"</span>
+      <div class="sec"><h3>Activity (since your last review) <span>≡</span></h3>No new activity<div class="act">☰ View all activity</div></div>
+      <div class="sec"><h3>Reviewers <span>⚙</span></h3><div class="p"><span class="av a3"></span>Copilot</div><div class="p"><span class="av a2"></span>bpinheiroms</div></div>
+      <div class="sec"><h3>Assignees <span>⚙</span></h3>No one—<u>assign yourself</u></div>
+      <div class="sec"><h3>Labels <span>⚙</span></h3>None yet</div>
+      <div class="sec"><h3>Projects <span>⚙</span></h3>None yet</div>
+      <div class="sec"><h3>Milestone <span>⚙</span></h3>No milestone</div>
+      <div class="sec"><h3>Development <span>⚙</span></h3>None yet</div>
+      <div class="sec"><h3>Deployments</h3>No deployments yet</div>
+      <div class="sec"><h3>3 participants</h3><span class="av a1"></span> <span class="av a2"></span> <span class="av a3"></span></div>
+      <div class="sec"><div class="act">Convert to draft</div><div class="danger">Close pull request</div><div class="danger">Archive pull request</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DEPOIS: Overview como "o que falta para o merge" ============ -->
+<div id="depois">
+  <div class="wrap">
+    <h1>fix(docker)!: publish the web page on 127.0.0.1 by default<span class="num" title="Copiar">#104</span></h1>
+    <div class="meta"><span class="pill">Open</span> <span class="av a1"></span><b style="color:var(--fg)">davidteren</b> quer integrar
+      <span class="ref">fix/web-port-loopback</span> → <span class="ref">main</span> · <span style="color:var(--ok)">+45</span> <span style="color:var(--bad)">−3</span> em 4 arquivos · há 7 h</div>
+    <div class="people">Revisores <span class="chip"><span class="av a3"></span>Copilot</span><span class="chip"><span class="av a2"></span>bpinheiroms</span>
+      <span class="ghost">+ assignee</span><span class="ghost">+ label</span><span class="ghost">+ projeto</span></div>
+    <div class="tabs"><span class="on">Overview</span><span>Commits <span class="cnt">3</span></span><span>Checks <span class="cnt">1</span></span><span>Files changed <span class="cnt">4</span></span></div>
+
+    <div class="verdict">
+      <div><h2>Faltam 3 coisas para o merge</h2><p>Nada novo desde a sua última revisão.</p></div>
+      <div class="steps" title="1 de 4 ok"><i class="ok"></i><i class="w"></i><i class="w"></i><i></i></div>
+    </div>
+
+    <div class="todo">
+      <div class="item">
+        <span class="ic w">!</span>
+        <div><b>3 workflows esperando a sua aprovação</b><div class="sub">Contribuição de fork: CI só roda depois que um maintainer aprova. <code>cla</code> ✓ passou.</div></div>
+        <div class="acts"><span class="btn sm pri">Aprovar e rodar</span></div>
+      </div>
+      <div class="item">
+        <span class="ic w">!</span>
+        <div><b>4 conversas sem resolver</b><div class="sub">Todas abertas por você · 2 já resolvidas</div></div>
+        <div class="acts"><span class="btn sm">Abrir em Files ↗</span></div>
+        <div class="threads">
+          <div class="th"><span class="loc">docker/test_diagnostics.py:69</span><span class="t">Skip guard crashes instead of skipping when the docker binary is absent</span><span class="who"><span class="av a2"></span>você · 6 h</span></div>
+          <div class="th"><span class="loc">docker-compose.yml:174</span><span class="t">Please test this mapping on the other supported runtimes before merge.</span><span class="who"><span class="av a2"></span>você · 4 h</span></div>
+          <div class="th"><span class="loc">README.md:50</span><span class="t">The Docker Engine 28.3.3 minimum is documented but not checked.</span><span class="who"><span class="av a2"></span>você · 4 h</span></div>
+          <div class="th"><span class="loc">changelog.d/fix-web-port-loopback.md:6</span><span class="t">Make the breaking change impossible to miss in the release note.</span><span class="who"><span class="av a2"></span>você · 4 h</span></div>
+        </div>
+      </div>
+      <div class="item">
+        <span class="ic o"></span>
+        <div><b>Nenhuma aprovação</b><div class="sub">Copilot e você comentaram, ninguém aprovou. A branch <code>main</code> não exige aprovação.</div></div>
+        <div class="acts"><span class="btn sm">Revisar</span></div>
+      </div>
+      <div class="item">
+        <span class="ic ok">✓</span>
+        <div><b>Sem conflitos com <code>main</code></b></div>
+        <div></div>
+      </div>
+      <div class="merge">
+        <span class="hint">Libera quando os itens acima estiverem ✓</span>
+        <div class="r"><span class="btn sm">Ativar auto-merge</span><span class="btn sm pri dis">Squash and merge ▾</span></div>
+      </div>
+    </div>
+
+    <details class="fold">
+      <summary>Descrição <span class="s">The OpenCodeReview web page now opens only on the machine that runs it…</span></summary>
+      <div class="body">
+        <h3>What</h3><p>The OpenCodeReview web page now opens only on the machine that runs it. Before, it was open to every device on the same network.</p>
+        <h3>Why</h3><p>The page hands the app's secret access token to anyone who opens it. So anyone who could reach the page could use the app, including on a shared office network or a server. A safe default is better than a warning.</p>
+        <h3>How</h3><p>The Docker setup now publishes the page on <code>127.0.0.1</code> by default. A new setting, <code>OCR_WEB_BIND</code>, lets people open it to other machines on purpose.</p>
+      </div>
+    </details>
+    <details class="fold">
+      <summary>Atividade <span class="s">último: você revisou há 4 h</span></summary>
+      <div class="body" style="font-size:13px">
+        <div class="ev"><span class="av a1"></span>davidteren abriu a PR · há 7 h</div>
+        <div class="ev"><span class="av a3"></span>Copilot revisou, 2 comentários (resolvidos) · há 7 h</div>
+        <div class="ev"><span class="av a1"></span>davidteren respondeu 2 comentários · há 7 h</div>
+        <div class="ev"><span class="av a2"></span>você revisou, 4 comentários · há 6 h e 4 h</div>
+      </div>
+    </details>
+
+    <div class="footer-acts"><span>Converter em draft</span><span class="d">Fechar PR</span><span class="d">Arquivar</span></div>
+  </div>
+</div>
+
+<script>
+  const set = (v) => {
+    document.body.dataset.view = v;
+    document.querySelectorAll(".switcher button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+    history.replaceState(null, "", "?" + v);
+  };
+  document.querySelectorAll(".switcher button").forEach((b) => b.addEventListener("click", () => set(b.dataset.v)));
+  if (location.search === "?antes") set("antes");
+</script>
+</body>
+</html>

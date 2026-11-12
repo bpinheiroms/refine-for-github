@@ -1,0 +1,821 @@
+/* GitHub Refine — Overview do PR como "o que falta para o merge"
+ *
+ * Duas peças nossas, montadas só com o que já está na página (sem API, sem token):
+ *
+ *   #gr-cockpit  (coluna principal, antes da caixa de merge)
+ *     veredito + lista de pendências com a ação de cada uma: checks (com a
+ *     lista dos que falharam), conversas sem resolver, aprovação, conflitos;
+ *     no rodapé, os botões de merge da própria página (acionam os originais).
+ *
+ *   #gr-panel    (coluna da direita, no lugar da barra lateral)
+ *     conversas no código e comentários. Clicar abre um modal (#gr-modal) com
+ *     uma cópia da conversa inteira (trecho do diff + respostas) e um botão
+ *     para ir até o original, onde dá para responder.
+ *
+ * De onde vem cada dado:
+ *   - conversas: `.js-resolvable-timeline-thread-container[data-resolved]`;
+ *   - comentários: `.comment-body` fora da descrição e das conversas;
+ *   - checks: linhas da caixa de merge com "Failing after…", "Successful in…";
+ *   - aprovação: aria-label dos revisores ("X approved these changes");
+ *   - conflitos e merge: textos e botões da caixa de merge.
+ * O que não for encontrado simplesmente não aparece (nada de chute).
+ *
+ * A página original não perde nada: o CSS só esconde a caixa de merge e a
+ * barra lateral (atributos data-gr-*), e "Mostrar Overview original" desfaz.
+ */
+const GRCockpit = (() => {
+  const root = document.documentElement;
+  let el = null, panel = null;
+  let renderedSig = null, panelSig = null;
+  let refs = { threads: [], comments: [] }; // elementos originais, para o modal
+  let expandedChecks = null;                // caminho em que já abrimos a lista de checks
+
+  const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
+  const text = (node) => clean(node?.textContent);
+  const plural = (n, one, many) => (n === 1 ? one : many);
+  const names = (list) => list.length <= 2 ? list.join(" and ") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+  const displayName = (login) => ({ "copilot-pull-request-reviewer": "Copilot", "github-actions": "GitHub Actions" })[login] || login.replace(/\[bot\]$/, "");
+  const cut = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+
+  function ago(iso) {
+    if (!iso) return "";
+    const m = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000));
+    if (m < 60) return `${m}m`;
+    const h = Math.round(m / 60);
+    return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
+  }
+
+  // ---------- leitura da página ----------
+
+  // Título de um comentário: o primeiro **negrito** do primeiro bloco com texto,
+  // senão o próprio bloco. Pula assinaturas em <sub> ("Automated review by…").
+  function commentTitle(body) {
+    if (!body) return "";
+    for (const block of body.querySelectorAll(":scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > ul > li, :scope > ol > li")) {
+      if (block.matches("p") && block.children.length === 1 && block.firstElementChild.matches("sub")) continue;
+      const t = text(block);
+      if (!t) continue;
+      const strong = block.querySelector("strong, b");
+      const pick = strong && t.startsWith(text(strong).slice(0, 8)) ? text(strong) : t;
+      return cut(pick.replace(/^\[[^\]]+\]\s*/, ""), 140);
+    }
+    return cut(text(body), 140);
+  }
+
+  // Autor da última mensagem da conversa (para destacar quando outra pessoa respondeu).
+  const lastAuthor = (t, q, viewer) => { const all = [...t.querySelectorAll(q)].map(text).filter(Boolean); return all.length > 1 ? who(all[all.length - 1], viewer) : ""; };
+  const who = (login, viewer) => (!login ? "?" : login === viewer ? "you" : displayName(login));
+
+  // Conversas resolvidas chegam recolhidas: o GitHub só baixa o conteúdo ao
+  // expandir (data-deferred-content-url, mesma origem, sessão do usuário).
+  // Baixamos o mesmo trecho uma vez e o colocamos onde o GitHub colocaria.
+  const hydrated = new Set();
+  function hydrateCollapsed() {
+    for (const t of document.querySelectorAll(".js-resolvable-timeline-thread-container[data-deferred-content-url]")) {
+      const url = t.getAttribute("data-deferred-content-url");
+      if (hydrated.has(url) || t.querySelector(".comment-body, .js-comment-body")) continue;
+      hydrated.add(url);
+      fetch(url, { credentials: "same-origin", headers: { Accept: "text/html" } })
+        .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+        .then((html) => {
+          const body = t.querySelector("[data-target='review-thread-collapsible.body']") || t;
+          const tpl = document.createElement("template");
+          tpl.innerHTML = html;
+          tpl.content.querySelectorAll("script").forEach((n) => n.remove());
+          const slot = body.querySelector("include-fragment");
+          if (slot) slot.replaceWith(tpl.content); else body.append(tpl.content);
+        })
+        .catch(() => {});
+    }
+  }
+
+  // Overview nova (React): cada conversa é um <article> sem id dentro da review,
+  // com o caminho do arquivo num link mono no título e "Line N" ao lado.
+  const NEW_THREAD = "main article:not([id]):has(> div h2 a.text-mono)";
+  const isNewThread = (t) => t.matches("article:not([id])");
+  const threadResolved = (t) => isNewThread(t)
+    ? !!t.querySelector(":scope > div [aria-label^='Unresolve conversation']") || [...t.querySelectorAll(":scope > div [data-component='Label']")].some((l) => /^resolved$/i.test(text(l)))
+    : t.getAttribute("data-resolved") !== "false";
+
+  function readNewThread(t, i, viewer) {
+    const head = t.querySelector(":scope > div h2");
+    const path = text(head?.querySelector("a.text-mono")).replace(/[\u200e\u200f]/g, "");
+    const line = ([...(head?.querySelectorAll("span") || [])].map(text).find((x) => /^Line \d+/i.test(x)) || "").replace(/^Line /i, "");
+    const bodies = t.querySelectorAll(".markdown-body");
+    const login = text(t.querySelector("[data-testid='avatar-link']"));
+    const resolver = text([...t.querySelectorAll("span")].find((x) => /^\s*\S+ marked this conversation as resolved/.test(x.textContent))?.querySelector("b"));
+    return {
+      i,
+      resolved: threadResolved(t),
+      loc: `${path}${line ? ":" + line : ""}`,
+      // Resolvidas chegam recolhidas (o texto só aparece ao expandir).
+      title: commentTitle(bodies[0]) || (resolver ? `Resolved by ${who(resolver, viewer)}` : "Open to read"),
+      who: login ? who(login, viewer) : "",
+      avatar: t.querySelector("img[alt^='@']")?.getAttribute("src") || null,
+      when: ago(t.querySelector("relative-time")?.getAttribute("datetime")),
+      replies: Math.max(0, bodies.length - 1),
+      lastWho: lastAuthor(t, "[data-testid='avatar-link']", viewer),
+      outdated: [...t.querySelectorAll(":scope > div [data-component='Label']")].some((l) => /^outdated$/i.test(text(l))),
+    };
+  }
+
+  function readThreads(viewer) {
+    // A mesma conversa pode aparecer duas vezes (timeline + painel "Comments" do
+    // GitHub aberto): deduplicamos pelo link da conversa (#r123…).
+    const keyOf = (t) => t.querySelector(":scope > div h2 a[href*='#r'], a[href*='#r']")?.getAttribute("href")?.split("#")[1] || t;
+    const seenT = new Set();
+    const fresh = [...document.querySelectorAll(NEW_THREAD)].filter((t) => { const k = keyOf(t); if (seenT.has(k)) return false; seenT.add(k); return true; });
+    if (fresh.length) {
+      refs.threads = fresh;
+      const list = fresh.map((t, i) => readNewThread(t, i, viewer));
+      return { open: list.filter((t) => !t.resolved), resolved: list.filter((t) => t.resolved) };
+    }
+    const all = [...document.querySelectorAll(".js-resolvable-timeline-thread-container[data-resolved]")];
+    refs.threads = all;
+    const list = all.map((t, i) => {
+      const lines = t.querySelectorAll("td[data-line-number]");
+      const line = lines.length ? lines[lines.length - 1].getAttribute("data-line-number") : "";
+      return {
+        i,
+        resolved: t.getAttribute("data-resolved") !== "false",
+        loc: `${text(t.querySelector("a.text-mono, .text-mono"))}${line ? ":" + line : ""}`,
+        title: commentTitle(t.querySelector(".comment-body, .js-comment-body")) || "Loading…",
+        who: text(t.querySelector("a.author")) ? who(text(t.querySelector("a.author")), viewer) : "",
+        avatar: t.querySelector("img.avatar")?.getAttribute("src") || null,
+        when: ago(t.querySelector("relative-time")?.getAttribute("datetime")),
+        replies: Math.max(0, t.querySelectorAll(".comment-body, .js-comment-body").length - 1),
+        lastWho: lastAuthor(t, "a.author", viewer),
+        outdated: [...t.querySelectorAll(".Label, .label, .State")].some((l) => /^outdated$/i.test(text(l))),
+      };
+    });
+    return { open: list.filter((t) => !t.resolved), resolved: list.filter((t) => t.resolved) };
+  }
+
+  // Comentários gerais: corpos de comentário fora da descrição e das conversas.
+  function readComments(viewer) {
+    const seen = new Set();
+    const out = [];
+    // Clássica: .comment-body. Overview nova (React): article#issuecomment-… com .markdown-body.
+    for (const body of document.querySelectorAll("main .comment-body, main .js-comment-body, main article:is([id^='issuecomment-'], [id^='pullrequestreview-']) .markdown-body")) {
+      if (body.closest("[data-gr-desc], .js-resolvable-timeline-thread-container, #gr-cockpit, #gr-panel")) continue;
+      const box = body.closest("article:is([id^='issuecomment-'], [id^='pullrequestreview-']), [id^='issuecomment-'], .timeline-comment-group, .TimelineItem") || body.parentElement;
+      if (box.matches("article") && body.closest("article") !== box) continue; // conversa dentro da review
+      const key = box.id || box;
+      if (seen.has(box) || seen.has(key)) continue;
+      seen.add(box); seen.add(key);
+      out.push(box);
+    }
+    refs.comments = out;
+    return out.map((box, i) => ({
+      i,
+      who: who(["a.author", "[data-testid='avatar-link']", "a[data-hovercard-type='user']", "a[data-hovercard-type='bot']"]
+        .map((q) => text(box.querySelector(q))).find(Boolean) || "", viewer),
+      avatar: box.querySelector("img.avatar, img[alt^='@']")?.getAttribute("src") || null,
+      when: ago(box.querySelector("relative-time")?.getAttribute("datetime")),
+      title: commentTitle(box.querySelector(".comment-body, .js-comment-body, .markdown-body")),
+    }));
+  }
+
+  // Linhas da lista de checks na caixa de merge ("CI / check (pull_request)  Failing after 3s  Required").
+  const CHECK_STATUS = /^(failing|failed|successful|cancelled|canceled|skipped|queued|in progress|pending|expected|waiting|neutral|action required|timed out|started)\b/i;
+  function readCheckRows(mergebox, textNodes) {
+    if (!mergebox) return [];
+    const nodes = textNodes(mergebox, CHECK_STATUS).map((n) => n.parentElement);
+    const count = (e) => nodes.filter((n) => e.contains(n)).length;
+    const rows = new Map();
+    for (const n of nodes) {
+      let row = n;
+      while (row.parentElement && row.parentElement !== mergebox && count(row.parentElement) === 1) row = row.parentElement;
+      if (row === n) continue;
+      const status = text(n);
+      const link = [...row.querySelectorAll("a[href]")].find((a) => text(a) && !CHECK_STATUS.test(text(a)));
+      const name = link ? text(link) : clean(text(row).replace(status, "").replace(/\bRequired\b/, ""));
+      if (!name || rows.has(name)) continue;
+      rows.set(name, {
+        name: cut(name, 80), status,
+        st: /^(failing|failed|cancelled|canceled|timed out|action required)/i.test(status) ? "bad" : /^(successful|skipped|neutral)/i.test(status) ? "ok" : "warn",
+        required: /\bRequired\b/.test(text(row)),
+        href: link?.getAttribute("href") || null,
+      });
+    }
+    return [...rows.values()];
+  }
+
+  // Botões de merge da caixa original ("Resolve conflicts", "Enable auto-merge (squash)"…).
+  const MERGE_ACTION = /merge|conflict|update branch|rebase|ready for review|approve|reopen/i;
+  function readMergeActions(mergebox) {
+    if (!mergebox) return [];
+    const seen = new Set();
+    return [...mergebox.querySelectorAll("button, a[href]")]
+      .map((b) => text(b))
+      .filter((t) => t.length > 2 && t.length < 40 && MERGE_ACTION.test(t) && !/^merge conflicts$/i.test(t) && !seen.has(t) && seen.add(t));
+  }
+
+  // Texto de uma célula da caixa de merge nova ("Checks 1 required failing, 1 failing").
+  function cell(scope, label, textNodes) {
+    const node = textNodes(scope, new RegExp(`^${label}$`, "i"))[0];
+    let e = node?.parentElement;
+    while (e && e !== scope && text(e).length <= label.length + 1) e = e.parentElement;
+    return e && e !== scope ? { text: text(e).replace(new RegExp(`^${label}\\s*`, "i"), ""), el: e } : null;
+  }
+
+  function sidebarSection(name) {
+    return [...document.querySelectorAll("[data-gr-sb]")].find((s) => s.getAttribute("data-gr-sb") === name) || null;
+  }
+
+  function readPage(textNodes) {
+    const viewer = document.querySelector('meta[name="user-login"]')?.content || "";
+    const prState = document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || "open";
+    const base = [...document.querySelectorAll("[data-gr-branch]")].map((b) => text(b).split(":").pop())[0] || "the base branch";
+    const prUrl = location.pathname.replace(/\/$/, "");
+    const mergebox = document.querySelector("[data-gr-mergebox]");
+    const scopeText = text(mergebox);
+    const items = [];
+
+    if (/^(draft|rascunho)$/.test(prState)) {
+      items.push({ st: "warn", title: "Pull request is a draft", sub: "Reviewers aren't notified until it's ready.",
+        act: [{ label: "Ready for review", click: "^ready for review$" }] });
+    }
+
+    // Checks. A lista detalhada só existe depois de aberta: abrimos uma vez.
+    const checksCell = mergebox && cell(mergebox, "Checks", textNodes);
+    let rows = readCheckRows(mergebox, textNodes);
+    if (!rows.length && checksCell && expandedChecks !== location.pathname) {
+      expandedChecks = location.pathname;
+      (checksCell.el.closest("button, [role='button']") || checksCell.el.querySelector("button, [role='button']") || checksCell.el).click();
+    }
+    const checks = checksCell?.text || "";
+    const failingN = [...checks.matchAll(/(\d+)\s+(?:required\s+)?failing/gi)].reduce((a, m) => a + +m[1], 0);
+    const failedRows = rows.filter((r) => r.st === "bad");
+    // Lê de um nó de texto só: no texto juntado da célula o contador vizinho gruda no número ("4" + "4 workflows" = "44").
+    const RUNS = /^\s*(\d+)\s+workflows?\s+(?:approvals?\s+pending|awaiting approval|runs? awaiting)/i;
+    const runsNode = mergebox && textNodes(mergebox, RUNS)[0];
+    const runs = runsNode ? runsNode.nodeValue.match(RUNS) : `${checks} ${scopeText}`.match(/\b(\d+)\s+workflows?\s+(?:approvals?\s+pending|awaiting approval|runs? awaiting)/i);
+    if (failingN || failedRows.length || /some checks were not successful/i.test(scopeText)) {
+      const n = Math.max(failingN, failedRows.length);
+      const req = failedRows.filter((r) => r.required).length || +(checks.match(/(\d+)\s+required\s+failing/i)?.[1] || 0);
+      items.push({ st: "bad", title: n ? `${n} failing ${plural(n, "check", "checks")}${req ? ` (${req} required)` : ""}` : "Checks failed",
+        checks: rows, act: [{ label: "View checks", href: `${prUrl}/checks` }] });
+    } else if (runs || /waiting for approval|requires approval from a maintainer/i.test(scopeText)) {
+      const n = runs ? +runs[1] : 0;
+      items.push({ st: "warn", title: n ? `${n} ${plural(n, "workflow", "workflows")} awaiting approval` : "Workflows awaiting approval",
+        sub: "Fork contribution: CI runs only after a maintainer approves.", checks: rows,
+        act: [{ label: "Approve and run", primary: true, click: "approve( and run)? workflows?( to run)?|approve and run" }] });
+    } else if (rows.some((r) => r.st === "warn") || /in progress|pending|queued|expected|haven.t completed/i.test(checks)) {
+      items.push({ st: "warn", title: "Checks running", sub: checks, checks: rows, act: [{ label: "View checks", href: `${prUrl}/checks` }] });
+    } else if (rows.length || /passed|successful|all checks/i.test(`${checks} ${scopeText}`)) {
+      items.push({ st: "ok", title: rows.length ? `${plural(rows.length, "Check passed", `All ${rows.length} checks passed`)}` : "Checks passed" });
+    }
+
+    // Conversas: ficam só no painel (aba Unresolved), não repetimos no cockpit.
+    const threads = readThreads(viewer);
+
+    // Aprovação
+    const reviewers = sidebarSection("reviewers");
+    const labels = [...(reviewers?.querySelectorAll("[aria-label]") || [])].map((e) => e.getAttribute("aria-label"));
+    const pick = (re) => [...new Set(labels.map((l) => l.match(re)?.[1]).filter(Boolean).map((l) => who(l, viewer)))];
+    const approved = pick(/^(.+?) approved these changes$/i);
+    const changes = pick(/^(.+?) requested changes$/i);
+    const commented = pick(/^(.+?) left review comments$/i);
+    const awaiting = pick(/^Awaiting requested review from (.+)$/i);
+    const approvalsText = `${(mergebox && cell(mergebox, "Approvals", textNodes))?.text || ""} ${scopeText} ${text(reviewers)}`;
+    const notRequired = /at least 0 approving/i.test(approvalsText);
+    const reviewAct = [{ label: "Review", href: `${prUrl}/files` }];
+    if (changes.length || /changes requested/i.test(approvalsText)) {
+      items.push({ st: "bad", title: changes.length ? `Changes requested by ${names(changes)}` : "Changes requested", act: reviewAct });
+    } else if (approved.length) {
+      items.push({ st: "ok", title: `Approved by ${names(approved)}` });
+    } else if (!notRequired && /review required|approving reviews? (?:is|are) required/i.test(approvalsText)) {
+      items.push({ st: "warn", title: "Approval required", sub: awaiting.length ? `Waiting on ${names(awaiting)}.` : "", act: reviewAct });
+    } else if (reviewers || mergebox) {
+      const sub = [commented.length ? `${names(commented)} commented, nobody approved yet.` : "",
+        awaiting.length ? `Waiting on ${names(awaiting)}.` : "", notRequired ? `${base} doesn't require approval.` : ""].filter(Boolean).join(" ");
+      items.push({ st: "todo", title: "No approvals yet", sub, act: reviewAct });
+    }
+
+    // Conflitos
+    if (/merge conflicts|has conflicts|conflicts must be resolved|resolve conflicts/i.test(scopeText)) {
+      items.push({ st: "bad", title: `Conflicts with ${base}`, sub: "Resolve them before merging.", act: [{ label: "Resolve conflicts", primary: true, click: "^resolve conflicts$", href: `${prUrl}/conflicts` }] });
+    } else if (/no conflicts with the base branch/i.test(scopeText)) {
+      items.push({ st: "ok", title: `No conflicts with ${base}` });
+    }
+
+    const people = [...new Map([...(reviewers?.querySelectorAll("img[alt^='@']") || [])]
+      .map((img) => { const login = img.alt.slice(1); return [login, { name: who(login, viewer), avatar: img.getAttribute("src") }]; })).values()];
+    const labelChips = [...(sidebarSection("labels")?.querySelectorAll("a[href*='/labels/'], a[href*='label%3A'], a[href*='label:']") || [])]
+      .map((a) => ({ name: text(a), color: getComputedStyle(a).backgroundColor })).filter((l) => l.name);
+
+    return {
+      prState, items, people, labels: labelChips,
+      mergeActions: readMergeActions(mergebox).filter((t) => !/^resolve conflicts$/i.test(t) || !items.some((i) => /^Conflitos/.test(i.title))),
+      hasMergebox: !!mergebox,
+      threads, comments: readComments(viewer),
+    };
+  }
+
+  // ---------- desenho ----------
+
+  function h(tag, attrs = {}, ...kids) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null || v === false) continue;
+      if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+      else if (k === "class") n.className = v;
+      else n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const k of kids.flat(Infinity)) if (k != null && k !== false) n.append(k.nodeType ? k : String(k));
+    return n;
+  }
+
+  // Aciona um botão da página original (escondida) pelo texto.
+  function clickOriginal(pattern) {
+    const re = pattern instanceof RegExp ? pattern : new RegExp(pattern, "i");
+    const btn = [...document.querySelectorAll("main button, main a, main summary, main [role='button'], main [role='menuitem']")]
+      .find((b) => !b.closest("#gr-cockpit, #gr-panel, #gr-modal") && re.test(text(b)));
+    if (btn) { btn.click(); return true; }
+    return false;
+  }
+
+  function actionButton(a) {
+    const cls = `gr-btn${a.primary ? " gr-pri" : ""}`;
+    if (a.click) return h("button", { type: "button", class: cls, onclick: () => { if (!clickOriginal(a.click) && a.href) location.href = a.href; } }, a.label);
+    return h("a", { class: cls, href: a.href }, a.label);
+  }
+
+  // Botão que liga/desliga um atributo no <html> e troca o próprio texto.
+  function toggle(attr, offLabel, onLabel, cls) {
+    return h("button", { type: "button", class: cls, onclick: (e) => {
+      const on = !root.hasAttribute(attr);
+      root.toggleAttribute(attr, on);
+      e.currentTarget.textContent = on ? onLabel : offLabel;
+    } }, root.hasAttribute(attr) ? onLabel : offLabel);
+  }
+
+  const ICON = { ok: "✓", warn: "!", bad: "×", todo: "" };
+
+  function checkRow(r) {
+    return h(r.href ? "a" : "div", { class: "gr-check", "data-st": r.st, href: r.href },
+      h("span", { class: "gr-dot" }), h("span", { class: "gr-cn" }, r.name), h("span", { class: "gr-cs" }, r.status),
+      r.required ? h("span", { class: "gr-req" }, "Required") : null);
+  }
+
+  function checksBlock(rows) {
+    if (!rows?.length) return null;
+    const bad = rows.filter((r) => r.st !== "ok"), ok = rows.filter((r) => r.st === "ok");
+    return h("div", { class: "gr-checks" }, bad.map(checkRow),
+      ok.length ? h("details", { class: "gr-ok-checks" }, h("summary", {}, `${ok.length} passed ${plural(ok.length, "check", "checks")}`), ok.map(checkRow)) : null);
+  }
+
+  function render(m) {
+    const n = m.items.filter((i) => i.st !== "ok").length;
+    const merged = /^(merged|mesclado)$/.test(m.prState), closed = /^(closed|fechado)$/.test(m.prState);
+    const open = !merged && !closed;
+    const verdict = merged ? "Merged" : closed ? "Closed without merging" : n ? `${n} ${plural(n, "thing", "things")} left before merging`
+      : m.threads.open.length ? `Ready to merge · ${m.threads.open.length} open ${plural(m.threads.open.length, "conversation", "conversations")}` : "Ready to merge ✓";
+
+    // U1 (hierarquia por contraste): um só botão de destaque, o do primeiro item que falta.
+    // O mais grave primeiro (falhou > atenção > pendente): é ele que ganha o destaque.
+    const rank = { bad: 0, warn: 1, todo: 2 };
+    const todo = m.items.filter((i) => i.st !== "ok").sort((a, b) => rank[a.st] - rank[b.st]), done = m.items.filter((i) => i.st === "ok");
+    const firstAct = todo.find((i) => i.act?.length)?.act[0];
+    const acts = (it) => (it.act || []).map((a) => actionButton({ ...a, primary: a === firstAct }));
+    // A barra de merge não repete o que já está num item (ex.: "Resolve conflicts").
+    const itemLabels = todo.flatMap((i) => (i.act || []).map((a) => a.label.toLowerCase()));
+    const dup = (t) => itemLabels.some((l) => l === t.toLowerCase() || (/approve/.test(l) && /approve/i.test(t)));
+    const mergeActs = m.mergeActions.filter((t) => !dup(t));
+
+    // U2 (carga cognitiva): o que já está feito vira uma linha discreta no fim.
+    const list = open && m.items.length ? h("div", { class: "gr-todo" },
+      todo.map((it) => h("div", { class: "gr-item", "data-st": it.st },
+        h("span", { class: "gr-ic" }, ICON[it.st]),
+        h("div", { class: "gr-txt" }, h("b", {}, it.title), it.sub ? h("div", { class: "gr-sub" }, it.sub) : null),
+        h("div", { class: "gr-acts" }, acts(it)),
+        checksBlock(it.checks))),
+      done.length ? h("div", { class: "gr-donerow" }, done.map((it) => h("span", {}, h("i", {}, "✓"), it.title))) : null,
+      mergeActs.length ? h("div", { class: "gr-merge" },
+        h("span", { class: "gr-hint" }, n ? "Merge" : "All set to merge"),
+        mergeActs.map((t, i) => h("button", { type: "button", class: `gr-btn${i === mergeActs.length - 1 && !n ? " gr-pri" : ""}`,
+          onclick: () => clickOriginal(`^${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }, t))) : null) : null;
+
+    // Ações raras (draft, fechar, arquivar) ficam num menu; só o atalho para a Overview original fica à vista.
+    const more = open ? h("details", { class: "gr-more" }, h("summary", {}, "More actions"),
+      h("div", { class: "gr-menu" },
+        h("button", { type: "button", onclick: () => clickOriginal(/^convert to draft$/i) }, "Convert to draft"),
+        h("button", { type: "button", class: "gr-d", onclick: () => clickOriginal(/^archive pull request$/i) }, "Archive"),
+        h("button", { type: "button", class: "gr-d", onclick: () => clickOriginal(/^close pull request$/i) }, "Close pull request"))) : null;
+    const foot = h("div", { class: "gr-foot" }, more,
+      toggle("data-gr-cockpit-off", "Show original Overview", "Hide original Overview", "gr-orig"));
+
+    if (!open) { el.replaceChildren(); return; } // mergeada/fechada: nada a fazer, o cartão do GitHub já diz
+    el.replaceChildren(h("div", { class: "gr-verdict" }, h("h2", {}, verdict)), ...[list, foot].filter(Boolean));
+  }
+
+  // ---------- painel da direita + modal ----------
+
+  function card(kind, c) {
+    // Resposta de outra pessoa = algo para você ler: destaque. Resposta sua: só o número.
+    const theirs = c.replies && c.lastWho && c.lastWho !== "you" && c.lastWho !== c.who;
+    const reply = c.replies ? h("span", { class: `gr-rep${theirs ? " gr-rep-new" : ""}` },
+      theirs ? `↩ ${c.lastWho} replied` : `${c.replies} ${plural(c.replies, "reply", "replies")}`) : null;
+    return h("button", { type: "button", class: `gr-card${c.resolved ? " gr-done" : ""}${theirs ? " gr-hot" : ""}`, onclick: () => openModal(kind, c.i) },
+      c.loc ? h("span", { class: "gr-chead" }, h("span", { class: "gr-loc" }, c.loc), c.outdated ? h("span", { class: "gr-tag" }, "Outdated") : null) : null,
+      h("span", { class: "gr-ct" }, c.title || "(no text)"),
+      h("span", { class: "gr-meta" },
+        h("span", { class: "gr-who" }, c.avatar ? h("img", { src: c.avatar, alt: "" }) : null, `${c.who || ""}${c.who && c.when ? " · " : ""}${c.when || ""}`),
+        reply));
+  }
+
+  // Abas do painel: Unresolved · Resolved · Comments · Details (uma por vez).
+  // Details mostra a barra lateral original do GitHub (revisores, labels…),
+  // movida para dentro do painel enquanto a aba está aberta, então editar
+  // continua funcionando. Se ela não puder ser movida (Overview nova, React),
+  // a barra lateral original aparece logo abaixo das abas (data-gr-show-sidebar),
+  // então dá para voltar pelas abas.
+  let panelTab = "open";
+  let lastModel = null;
+  let details = null; // { node, mark }
+
+  function sidebarSource() {
+    const sec = document.querySelector("[data-gr-sb]");
+    return document.getElementById("partial-discussion-sidebar") || sec?.closest("rails-partial") || null;
+  }
+  function unmountDetails() {
+    if (!details) return;
+    details.mark.replaceWith(details.node);
+    details = null;
+  }
+  function mountDetails(host) {
+    const node = details?.node || sidebarSource();
+    if (!node) return false;
+    if (!details) {
+      const mark = document.createComment("gr-details");
+      node.replaceWith(mark);
+      details = { node, mark };
+    }
+    host.append(node);
+    return true;
+  }
+
+  function openTab(key) {
+    panelTab = key;
+    root.removeAttribute("data-gr-show-sidebar");
+    if (lastModel) renderPanel(lastModel);
+  }
+
+  function renderPanel(m) {
+    lastModel = m;
+    const { open, resolved } = m.threads;
+    // Sempre abre em Unresolved e nunca troca de aba sozinho: as conversas chegam
+    // aos poucos (React), e escolher a aba pelos dados fazia o painel pular de aba.
+    const stacked = root.hasAttribute("data-gr-stacked");
+    const tabs = [["open", "Open", open.length], ["resolved", "Resolved", resolved.length], ["comments", "Comments", m.comments.length], ["details", "Details", null]];
+    const bar = h("div", { class: "gr-tabs", role: "tablist", "aria-label": "Conversations and details" },
+      tabs.map(([key, label, n]) => h("button", { type: "button", role: "tab", class: `gr-tab${key === "open" && n ? " gr-attn" : ""}`, "aria-selected": String(panelTab === key),
+        onclick: () => openTab(key) }, label, n == null ? null : h("span", { class: "gr-n" }, String(n)))));
+
+    if (panelTab === "details") {
+      const host = h("div", { class: "gr-details", role: "tabpanel" });
+      panel.replaceChildren(bar, host);
+      // Empilhado: a barra lateral do GitHub aparece logo abaixo das abas (CSS esconde o que fica no meio).
+      if (stacked) unmountDetails();
+      if (stacked || !mountDetails(host)) root.setAttribute("data-gr-show-sidebar", "");
+      else root.removeAttribute("data-gr-show-sidebar");
+      return;
+    }
+    unmountDetails();
+    const list = panelTab === "comments" ? m.comments.map((c) => card("comments", c))
+      : (panelTab === "open" ? open : resolved).map((c) => card("threads", c));
+    // Estado vazio: ícone, título e uma frase; atalhos discretos só quando há para onde ir.
+    const E = {
+      open: ["✓", "Nothing open", resolved.length ? `All ${resolved.length} code ${plural(resolved.length, "conversation is", "conversations are")} resolved.` : "No one has commented on the code yet."],
+      resolved: ["○", "Nothing resolved", "Resolved code conversations will show up here."],
+      comments: ["💬", "No comments", "General comments on this pull request will show up here."],
+    }[panelTab];
+    const link = (label, key) => h("button", { type: "button", class: "gr-elink", onclick: () => openTab(key) }, label);
+    const links = panelTab === "open" ? [resolved.length && link(`See resolved (${resolved.length})`, "resolved"), m.comments.length && link(`See comments (${m.comments.length})`, "comments")].filter(Boolean) : [];
+    const emptyBox = h("div", { class: "gr-empty", "data-kind": panelTab },
+      h("span", { class: "gr-eicon" }, E[0]), h("b", {}, E[1]), h("p", {}, E[2]),
+      links.length ? h("div", { class: "gr-empty-acts" }, links) : null);
+    panel.replaceChildren(bar, h("div", { class: "gr-list", role: "tabpanel" },
+      panelTab === "comments" && pageComposer() ? newComment() : null,
+      list.length ? list : emptyBox));
+  }
+
+  // O modal mostra a conversa original do GitHub (movida para dentro enquanto
+  // está aberto, com um marcador no lugar dela), então Reply, Resolve, reações
+  // e sugestões continuam funcionando ali. Só movemos o que o servidor
+  // renderizou (Rails: turbo-frame / elementos js-*); o resto vira cópia.
+  let moved = null; // { orig, mark }
+
+  function closeModal() {
+    if (moved) {
+      moved.unhidden.forEach((n) => (n.hidden = true));
+      moved.mark.replaceWith(moved.orig);
+      moved = null;
+    }
+    document.getElementById("gr-modal")?.remove();
+    document.removeEventListener("keydown", onKey, true);
+  }
+  function onKey(e) {
+    if (e.key === "Escape" && !e.target.closest?.("textarea")) { e.stopPropagation(); closeModal(); }
+  }
+
+  // Nunca move o que o React desenhou (Overview nova): ele perde a referência e quebra.
+  const movable = (n) => !n.closest("[data-testid='timeline-item']") &&
+    (n.matches(".js-resolvable-timeline-thread-container, .js-timeline-item, .timeline-comment-group") || !!n.closest("turbo-frame"));
+
+  // Controles de resposta/resolver da própria conversa: no modal quem faz isso é o
+  // nosso campo, então tiramos os do GitHub (senão ficam dois campos e dois "Resolve").
+  const REPLY_CTRL = /^(write a reply|reply…|reply\.\.\.|add a reply|resolve|resolve conversation|unresolve|unresolve conversation)$/i;
+  function stripReplyControls(scope) {
+    const hits = new Set();
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, { acceptNode: (n) => REPLY_CTRL.test(n.nodeValue.trim()) ? 1 : 3 });
+    while (walker.nextNode()) { const e = walker.currentNode.parentElement; hits.add(e.closest("button, [role='button'], [tabindex], label") || e); }
+    scope.querySelectorAll("[placeholder], [aria-label]").forEach((e) => { if (REPLY_CTRL.test(e.getAttribute("placeholder") || "") || REPLY_CTRL.test((e.getAttribute("aria-label") || "").replace(/ in .*$/, ""))) hits.add(e); });
+    for (let e of hits) {
+      let parent = e.parentElement;
+      e.remove();
+      // Sobe removendo os contêineres que ficaram vazios (a linha "Write a reply | Resolve").
+      while (parent && parent !== scope && !parent.textContent.trim() && !parent.querySelector("img")) { const up = parent.parentElement; parent.remove(); parent = up; }
+    }
+  }
+
+  function readOnlyCopy(orig) {
+    const copy = orig.cloneNode(true);
+    copy.querySelectorAll("form, textarea, input, .js-comment-edit-button, .timeline-comment-actions, [hidden]").forEach((n) => n.remove());
+    stripReplyControls(copy);
+    copy.removeAttribute("id");
+    copy.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+    return copy;
+  }
+
+  const clickIn = (scope, re) => {
+    const b = [...scope.querySelectorAll("button, summary, [role='button']")].find((x) => re.test(text(x)) || re.test(x.getAttribute("aria-label") || ""));
+    b?.click();
+    return !!b;
+  };
+
+  // Escreve num <textarea> do GitHub de um jeito que o React também perceba.
+  function fill(field, value) {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set.call(field, value);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // Envia pela caixa de resposta original: a da conversa, ou a de comentário
+  // novo da página (citando o comentário) quando é um comentário geral.
+  function submitReply(kind, orig, body) {
+    let field;
+    if (kind === "threads") {
+      field = orig.querySelector("textarea");
+      if (!field) { clickIn(orig, /^reply/i); field = orig.querySelector("textarea"); }
+    } else {
+      field = pageComposer();
+      const quote = text(orig.querySelector(".comment-body, .js-comment-body, .markdown-body")).slice(0, 280);
+      if (field && quote) body = `> ${quote}\n\n${body}`;
+    }
+    const form = field?.closest("form");
+    if (!field || !form) return false;
+    fill(field, body);
+    form.requestSubmit();
+    return true;
+  }
+
+  // Caixa de comentário novo da página (escondida): usada pelo painel e pelas respostas.
+  const pageComposer = () => document.querySelector("#new_comment_field, form.js-new-comment-form textarea, main textarea[name='comment[body]'], main textarea[placeholder*='comment' i]");
+
+  // Novo comentário no topo da aba Comments. Criado uma vez só, para o rascunho
+  // sobreviver quando o painel é redesenhado.
+  let newBox = null;
+  function newComment() {
+    if (newBox) return newBox;
+    const field = h("textarea", { class: "gr-reply", rows: "3", placeholder: "Write a comment…" });
+    const status = h("span", { class: "gr-rstatus" });
+    const send = () => {
+      const body = field.value.trim();
+      if (!body) return field.focus();
+      const target = pageComposer(), form = target?.closest("form");
+      if (!form) { status.textContent = "Couldn't find GitHub's comment box."; return; }
+      fill(target, body);
+      form.requestSubmit();
+      field.value = "";
+      status.textContent = "Comment sent.";
+    };
+    field.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); } });
+    newBox = h("div", { class: "gr-new" }, field,
+      h("div", { class: "gr-cbar" }, status, h("button", { type: "button", class: "gr-btn gr-pri", onclick: send }, "Comment ⌘↵")));
+    return newBox;
+  }
+
+  function composer(kind, orig) {
+    const field = h("textarea", { class: "gr-reply", rows: "3", placeholder: kind === "threads" ? "Reply to this conversation…" : "Reply (the comment will be quoted)…" });
+    const status = h("span", { class: "gr-rstatus" });
+    const canResolve = kind === "threads" && !threadResolved(orig);
+    // Sem texto o botão só resolve; com texto, responde e resolve.
+    const resolveBtn = canResolve ? h("button", { type: "button", class: "gr-btn", onclick: () => send(true) }, "Resolve") : null;
+    const syncLabel = () => { if (resolveBtn) resolveBtn.textContent = field.value.trim() ? "Reply and resolve" : "Resolve"; };
+    const send = (resolve) => {
+      const body = field.value.trim();
+      if (!body && !resolve) { field.focus(); return; }
+      const sent = body ? submitReply(kind, orig, body) : true;
+      if (!sent) { status.textContent = "Couldn't find GitHub's reply box here. Use the link at the top to open it on GitHub."; return; }
+      const resolved = resolve ? clickIn(orig, /^resolve( conversation)?\b/i) : false;
+      field.value = "";
+      syncLabel();
+      if (resolve && !resolved) { status.textContent = body ? "Replied. Couldn't find the resolve button." : "Couldn't find the resolve button. Use the link at the top to open it on GitHub."; return; }
+      status.textContent = resolve ? (body ? "Replied and resolved." : "Resolved.") : "Reply sent.";
+      if (resolve) setTimeout(closeModal, 700);
+    };
+    field.addEventListener("input", syncLabel);
+    field.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(false); } });
+    return h("div", { class: "gr-composer" }, field,
+      h("div", { class: "gr-cbar" }, status,
+        resolveBtn,
+        h("button", { type: "button", class: "gr-btn gr-pri", onclick: () => send(false) }, "Reply ⌘↵")));
+  }
+
+
+  function openModal(kind, i) {
+    const orig = refs[kind][i];
+    if (!orig?.isConnected) return;
+    closeModal();
+
+    let content;
+    if (movable(orig)) {
+      const mark = document.createComment("gr-modal");
+      orig.replaceWith(mark);
+      const unhidden = [...orig.querySelectorAll("[data-target='review-thread-collapsible.body'][hidden]")];
+      unhidden.forEach((n) => (n.hidden = false));
+      moved = { orig, mark, unhidden };
+      content = orig;
+    } else {
+      content = readOnlyCopy(orig);
+    }
+
+    // Clicar num link dentro da conversa (ex.: "ir para o código") leva a outra página: fecha o modal.
+    const modal = h("div", { id: "gr-modal", onclick: (e) => {
+      if (e.target.id === "gr-modal") return closeModal();
+      const a = e.target.closest("a[href]");
+      if (a && !a.getAttribute("href").startsWith("#") && !e.metaKey && !e.ctrlKey && !e.shiftKey) setTimeout(closeModal, 0);
+    } },
+      h("div", { class: "gr-mbox", role: "dialog", "aria-modal": "true" },
+        h("div", { class: "gr-mhead" },
+          h("b", {}, kind === "threads" ? "Code conversation" : "Comment"),
+          h("button", { type: "button", class: "gr-x", "aria-label": "Close", onclick: closeModal }, "×")),
+        h("div", { class: "gr-mbody" }, content),
+        composer(kind, orig)));
+    document.body.appendChild(modal);
+    // Conversa recolhida da Overview nova: pede ao GitHub para expandir e atualiza a cópia.
+    if (kind === "threads" && isNewThread(orig) && !orig.querySelector(".markdown-body")) {
+      orig.querySelector("[data-dd-action-name='pull_requests.thread.expand'], [aria-label^='Open review comment']")?.click();
+      let tries = 0;
+      const poll = setInterval(() => {
+        const body = modal.isConnected && modal.querySelector(".gr-mbody");
+        if (!body || ++tries > 20) return clearInterval(poll);
+        if (orig.querySelector(".markdown-body")) { body.replaceChildren(readOnlyCopy(orig)); clearInterval(poll); }
+      }, 150);
+    }
+    document.addEventListener("keydown", onKey, true);
+    modal.querySelector(".gr-reply").focus();
+  }
+
+  // ---------- montagem ----------
+
+  // Cockpit antes da caixa de merge (ou da descrição); painel dentro do contêiner
+  // das colunas, no lugar da barra lateral. Recolocados se o React redesenhar.
+  let placedOnce = false;
+  function place() {
+    const anchor = document.querySelector("[data-gr-mergebox]") || document.querySelector("[data-gr-desc]");
+    if (!anchor?.parentElement) return false;
+    if (!el.isConnected || el.nextElementSibling !== anchor) anchor.parentElement.insertBefore(el, anchor);
+    const cols = document.querySelector("[data-gr-cols]");
+    // Tela estreita (o Primer empilha as colunas): o painel vem logo abaixo do
+    // cockpit, em vez de ir parar no fim da página ou fora da tela.
+    // Sem a coluna lateral identificada (ex.: barra lateral do GitHub não renderizada), o painel fica abaixo do cockpit.
+    // Página ainda carregando (colunas do GitHub não montadas) em tela larga: o
+    // painel espera, em vez de aparecer na coluna da esquerda e depois pular.
+    // Só mostra o painel quando a coluna principal já tem conteúdo (descrição
+    // carregada e o cockpit dentro das mesmas colunas); senão ele aparece sozinho
+    // à esquerda e salta para a direita quando o resto chega.
+    // Pronto = a coluna principal já tem conteúdo de verdade (altura), não só o esqueleto.
+    const main = cols && [...cols.children].find((c) => c !== panel && /ContentWrapper/.test(c.className));
+    const ready = !!(main && main.getBoundingClientRect().height > 240 && document.querySelector("[data-gr-desc], section:has(#overview-comments)"));
+    // Só na primeira colocação: depois disso, redimensionar (ou a aba Details no
+    // celular, que deixa a coluna com display:contents e altura 0) não pode
+    // esconder o painel.
+    if (ready) placedOnce = true;
+    if (!ready && !placedOnce && innerWidth >= 900) { panel.remove(); setTimeout(() => el?.isConnected && place(), 300); return true; }
+    // Não olhar o flex-direction das colunas: com data-gr-stacked o nosso CSS força
+    // "column", e o painel nunca voltaria para o lado ao alargar a janela.
+    const narrow = !cols || innerWidth < 900;
+    // Empilhado (celular/tela estreita): o painel vem depois da descrição, e a
+    // barra lateral original do GitHub aparece no fim da página (sem aba Details).
+    if (narrow) {
+      // Ordem: cockpit → descrição → conversas (painel) → commits → Details (o CSS
+      // manda os commits para depois do painel, sem mover o nó do React).
+      const desc = document.querySelector("[data-gr-desc]");
+      const after = desc && desc.parentElement === el.parentElement ? desc : el;
+      if (after.nextElementSibling !== panel) after.after(panel);
+    } else if (cols && panel.parentElement !== cols) cols.appendChild(panel);
+    const was = root.hasAttribute("data-gr-stacked");
+    root.toggleAttribute("data-gr-stacked", narrow);
+    panel.toggleAttribute("data-stacked", narrow);
+    if (was !== narrow && lastModel) renderPanel(lastModel);
+    return true;
+  }
+  // Menu "More actions" (<details>): fecha ao clicar fora, ao escolher uma opção ou com Esc.
+  document.addEventListener("click", (e) => {
+    for (const d of document.querySelectorAll("#gr-cockpit .gr-more[open]")) {
+      if (!d.contains(e.target) || e.target.closest(".gr-menu button")) d.open = false;
+    }
+  }, true);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") document.querySelectorAll("#gr-cockpit .gr-more[open]").forEach((d) => (d.open = false));
+  });
+  // Painel lateral do GitHub aberto como janela (CSS): clicar fora ou Esc fecha,
+  // usando o próprio botão de fechar do GitHub.
+  const SIDE = '[class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])';
+  // O botão de fechar do GitHub costuma ter o nome num tooltip (aria-labelledby), não em aria-label.
+  const labelOf = (b) => [b.getAttribute("aria-label"), ...(b.getAttribute("aria-labelledby") || "").split(" ").map((id) => id && document.getElementById(id)?.textContent),
+    b.nextElementSibling?.matches?.("[role='tooltip'], [popover]") ? b.nextElementSibling.textContent : ""].filter(Boolean).join(" ");
+  const closeSide = (panel) => {
+    if (!panel) return;
+    const btn = [...panel.querySelectorAll("button")].find((b) => /^close\b/i.test(labelOf(b).trim()))
+      || [...document.querySelectorAll("button[aria-expanded='true']")].find((b) => /close (side )?panel|comments|activity/i.test(labelOf(b)));
+    btn?.click();
+  };
+  document.addEventListener("mousedown", (e) => {
+    const panel = document.querySelector(SIDE);
+    if (!panel || panel.contains(e.target) || e.target.closest?.("[role='dialog'], [role='menu'], [role='listbox'], [popover], #__primerPortalRoot__, #gr-modal")) return;
+    // Os botões que abrem o painel (barra fixa) não devem fechá-lo antes de abrir de novo.
+    // Só os botões da barra fixa que abrem/fecham painéis ficam de fora; qualquer
+    // outra área da página (inclusive o cabeçalho da PR) fecha a gaveta.
+    if (e.target.closest?.("[data-docked-panel-toggle], [class*='StickyHeader'] button, [class*='miniHeader'] button")) return;
+    closeSide(panel);
+  }, true);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.getElementById("gr-modal")) closeSide(document.querySelector(SIDE)); });
+  // Menus do GitHub abertos a partir da gaveta (ordenar, filtros): o GitHub calcula a
+  // posição como se o painel estivesse no lugar original e o menu vai para o canto
+  // da tela. Reposicionamos o menu logo abaixo do botão que o abriu.
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest?.("button");
+    if (!btn || !btn.closest(SIDE)) return;
+    let tries = 0;
+    const fix = () => {
+      const menu = [...document.querySelectorAll("[role='menu'], [role='listbox'], [role='dialog']")]
+        .find((m) => m.offsetParent !== null && !m.closest(SIDE) && !m.closest("#gr-modal"));
+      if (!menu) { if (++tries < 15) requestAnimationFrame(fix); return; }
+      let box = menu;
+      while (box.parentElement && box.parentElement !== document.body && !box.style.top && !box.style.left && !/absolute|fixed/.test(getComputedStyle(box).position)) box = box.parentElement;
+      const a = btn.getBoundingClientRect(), w = box.getBoundingClientRect().width;
+      Object.assign(box.style, { position: "fixed", top: `${Math.round(a.bottom + 4)}px`, left: `${Math.round(Math.max(8, Math.min(a.right - w, innerWidth - w - 8)))}px`, zIndex: 300 });
+    };
+    requestAnimationFrame(fix);
+  }, true);
+  let resizeTimer = 0;
+  addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (el?.isConnected) place(); }, 150);
+  });
+
+  const UI_ATTRS = ["data-gr-cockpit-ready", "data-gr-show-sidebar", "data-gr-cockpit-off", "data-gr-stacked"];
+  let lastPath = null;
+
+  function teardown() {
+    newBox = null;
+    placedOnce = false;
+    unmountDetails();
+    panelTab = "open";
+    el?.remove();
+    panel?.remove();
+    closeModal();
+    renderedSig = panelSig = null;
+    for (const a of UI_ATTRS) root.removeAttribute(a);
+  }
+
+  function update({ settings, textNodes }) {
+    const isPull = /^\/[^/]+\/[^/]+\/pull\/\d+\/?$/.test(location.pathname);
+    if (!settings.enabled || !settings.cockpit || !isPull) { teardown(); return; }
+    if (lastPath !== location.pathname) { lastPath = location.pathname; teardown(); }
+
+    if (!el) el = h("section", { id: "gr-cockpit", "aria-label": "Pull request summary" });
+    if (!panel) panel = h("aside", { id: "gr-panel", "aria-label": "Conversations and comments" });
+    if (!place()) return;
+    // Overview original visível: a barra lateral precisa estar no lugar dela.
+    if (root.hasAttribute("data-gr-cockpit-off") && details) { unmountDetails(); panelTab = "open"; panelSig = null; }
+
+    hydrateCollapsed();
+    const m = readPage(textNodes);
+    // Sem nada reconhecido numa PR aberta, não mexemos na página.
+    const usable = m.items.length > 0 || !/^(open|aberto|draft|rascunho)$/.test(m.prState);
+    root.toggleAttribute("data-gr-cockpit-ready", usable);
+    if (!usable) { el.replaceChildren(); panel.replaceChildren(); renderedSig = panelSig = null; return; }
+
+    const { threads, comments, ...main } = m;
+    const sig = JSON.stringify(main);
+    if (sig !== renderedSig) { renderedSig = sig; render(m); }
+    const psig = JSON.stringify({ threads, comments });
+    if (psig !== panelSig) { panelSig = psig; renderPanel(m); }
+  }
+
+  return { update };
+})();

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - name: Manifest is valid
+        run: |
+          node -e '
+            const m = require("./extension/manifest.json");
+            const fail = (msg) => { console.error(msg); process.exit(1); };
+            if (m.manifest_version !== 3) fail("manifest_version must be 3");
+            if (!/^\d+\.\d+\.\d+$/.test(m.version)) fail("version must be x.y.z");
+            if (m.description.length > 132) fail("description over 132 chars");
+            const perms = JSON.stringify(m.permissions);
+            if (perms !== "[\"storage\"]") fail("unexpected permissions: " + perms);
+            const hosts = JSON.stringify(m.host_permissions);
+            if (hosts !== "[\"https://github.com/*\"]") fail("unexpected host permissions: " + hosts);
+          '
+      - name: Scripts parse
+        run: for f in extension/src/*.js extension/popup/*.js; do node --check "$f"; done
+      - name: No remote code
+        run: |
+          if grep -nE '(eval\(|new Function\(|importScripts\(|<script[^>]+src=["'"'"']https?:)' extension/src/*.js extension/popup/*; then
+            echo "remote or dynamic code found"; exit 1
+          fi
+      - name: Package
+        run: ./scripts/package.sh

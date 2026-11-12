@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header>
+    <img class="logo" src="../icons/icon-48.png" alt="" width="28" height="28" />
+    <div>
+      <h1>Refine for GitHub</h1>
+      <p>Changes apply instantly, no reload.</p>
+    </div>
+    <label class="switch" title="Turn everything on/off">
+      <input type="checkbox" data-key="enabled" /><span></span>
+    </label>
+  </header>
+
+  <section class="accent">
+    <b>Accent color</b>
+    <div class="swatches">
+      <button data-accent="violet" style="--c:#8b7cf6" title="Violet"></button>
+      <button data-accent="blue" style="--c:#5b9dff" title="Blue"></button>
+      <button data-accent="green" style="--c:#3ecf8e" title="Green"></button>
+      <button data-accent="orange" style="--c:#ff9a4d" title="Orange"></button>
+    </div>
+  </section>
+
+  <script src="../src/settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
