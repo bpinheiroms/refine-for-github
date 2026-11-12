@@ -170,7 +170,13 @@ html[data-gr-dim-drafts] [data-gr-row][data-gr-state="draft"]:hover { opacity: 1
 
 html[data-gr-group-bots] [data-gr-list] { display: flex; flex-direction: column; }
 html[data-gr-group-bots] [data-gr-list] > * { order: 0; }
-html[data-gr-group-bots] [data-gr-list] > .gr-bot-toggle:not(.gr-draft-toggle) { order: 9; }
+html[data-gr-group-bots] [data-gr-list] > .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle) { order: 9; }
+/* In the merge queue: grouped right after the regular rows, before drafts */
+html[data-gr-group-bots] [data-gr-list] > .gr-queue-toggle { order: 5; }
+html[data-gr-group-bots] [data-gr-list] > [data-gr-queued] { order: 6; }
+html[data-gr-group-bots] [data-gr-list]:not([data-gr-queued-open]):has(> .gr-queue-toggle) > [data-gr-queued] { display: none !important; }
+[data-gr-queued-open] > .gr-queue-toggle .gr-chevron { transform: rotate(90deg); }
+.gr-bot-toggle .gr-bot-icon.gr-queue-icon { color: var(--fgColor-attention, #d29922); background: var(--bgColor-attention-muted, rgba(187,128,9,.15)); }
 /* Drafts grouped before bots */
 html[data-gr-group-bots] [data-gr-list] > .gr-draft-toggle { order: 7; }
 html[data-gr-group-bots] [data-gr-list] > [data-gr-draft] { order: 8; }
@@ -178,7 +184,7 @@ html[data-gr-group-bots] [data-gr-list]:not([data-gr-drafts-open]):has(> .gr-dra
 [data-gr-drafts-open] > .gr-draft-toggle .gr-chevron { transform: rotate(90deg); }
 .gr-bot-toggle .gr-bot-icon.gr-draft-icon { color: var(--fgColor-muted); background: var(--bgColor-neutral-muted, rgba(101,108,118,.2)); }
 html[data-gr-group-bots] [data-gr-list] > [data-gr-bot] { order: 10; }
-html[data-gr-group-bots] [data-gr-list]:not([data-gr-bots-open]):has(> .gr-bot-toggle:not(.gr-draft-toggle)) > [data-gr-bot] {
+html[data-gr-group-bots] [data-gr-list]:not([data-gr-bots-open]):has(> .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle)) > [data-gr-bot] {
   display: none !important;
 }
 
@@ -204,7 +210,7 @@ html[data-gr-group-bots] .gr-bot-toggle:hover { color: var(--fgColor-default); b
 }
 .gr-bot-toggle .gr-bot-icon svg, .gr-bot-toggle .gr-chevron svg { display: block; }
 .gr-bot-toggle .gr-chevron { margin-left: auto; display: inline-grid; place-items: center; color: var(--fgColor-muted); transition: transform 0.15s; }
-[data-gr-bots-open] > .gr-bot-toggle:not(.gr-draft-toggle) .gr-chevron { transform: rotate(90deg); }
+[data-gr-bots-open] > .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle) .gr-chevron { transform: rotate(90deg); }
 
 /* =========================================================================
    5. READING — markdown (PR description, comments, README)

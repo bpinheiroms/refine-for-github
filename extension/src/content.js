@@ -108,7 +108,7 @@
     if (/\/(issues|pull)\/\d+/.test(location.pathname)) {
       for (const el of document.querySelectorAll("[data-gr-row], [data-gr-title], [data-gr-list]")) {
         if (el.closest("#gr-panel, #gr-cockpit, #gr-modal")) continue;
-        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft"]) el.removeAttribute(a);
+        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft", "data-gr-queued"]) el.removeAttribute(a);
       }
       document.querySelectorAll("main .gr-bot-toggle").forEach((t) => t.remove());
       return;
@@ -130,9 +130,12 @@
 
       const authorText = [...row.querySelectorAll('a[data-hovercard-url*="/users/"], a[href*="author%3A"], a[href*="author:"]')]
         .map((a) => a.textContent).join(" ");
-      const isBot = BOT_AUTHOR.test(authorText) || BOT_TITLE.test(link.textContent.trim());
+      // In the merge queue: its own group (they merge on their own, nothing to do).
+      const queued = inMergeQueue(row);
+      const isBot = !queued && (BOT_AUTHOR.test(authorText) || BOT_TITLE.test(link.textContent.trim()));
+      row.toggleAttribute("data-gr-queued", queued);
       row.toggleAttribute("data-gr-bot", isBot);
-      row.toggleAttribute("data-gr-draft", !isBot && row.getAttribute("data-gr-state") === "draft");
+      row.toggleAttribute("data-gr-draft", !isBot && !queued && row.getAttribute("data-gr-state") === "draft");
 
       if (row.parentElement) lists.add(row.parentElement);
     }
@@ -140,6 +143,7 @@
       list.setAttribute("data-gr-list", "");
       ensureBotToggle(list);
       ensureDraftToggle(list);
+      ensureQueueToggle(list);
     }
   }
 
@@ -185,7 +189,7 @@
   // the bot rows.
   function ensureBotToggle(list) {
     const bots = list.querySelectorAll(":scope > [data-gr-bot]").length;
-    let toggle = list.querySelector(":scope > .gr-bot-toggle");
+    let toggle = list.querySelector(":scope > .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle)");
     if (bots < 2) { toggle?.remove(); return; }
 
     if (!toggle) {
@@ -210,6 +214,37 @@
   }
 
   // "N drafts" group: same pattern as the bots group, right before it.
+  // A row is in the merge queue when it shows the merge-queue icon or the "Queued" link
+  // (not counting the hidden status dialog on the queue page).
+  const inMergeQueue = (row) => [...row.querySelectorAll(".octicon-git-merge-queue, a")]
+    .some((el) => !el.closest("dialog, [role='dialog']") && (el.matches(".octicon-git-merge-queue") || /^queued$/i.test(el.textContent.trim())));
+
+  // "N in merge queue" group: same pattern as drafts, right before them.
+  function ensureQueueToggle(list) {
+    const n = list.querySelectorAll(":scope > [data-gr-queued]").length;
+    let toggle = list.querySelector(":scope > .gr-queue-toggle");
+    if (n < 2) { toggle?.remove(); return; }
+    if (!toggle) {
+      toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "gr-bot-toggle gr-queue-toggle";
+      toggle.addEventListener("click", () => {
+        const open = !list.hasAttribute("data-gr-queued-open");
+        list.toggleAttribute("data-gr-queued-open", open);
+        sessionStorage.setItem("gr-queued-open", open ? "1" : "");
+      });
+      list.appendChild(toggle);
+    }
+    if (sessionStorage.getItem("gr-queued-open")) list.setAttribute("data-gr-queued-open", "");
+    const text = `${n} in merge queue`;
+    if (toggle.dataset.text !== text) {
+      toggle.dataset.text = text;
+      // Octicon git-merge-queue
+      toggle.innerHTML = '<span class="gr-bot-icon gr-queue-icon" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.75 4.5a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5ZM3 7.75a.75.75 0 0 1 1.5 0v2.878a2.251 2.251 0 1 1-1.5 0Zm.75 5.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm5-7.75a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Zm5.75 2.5a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-1.5 0a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg></span><span class="gr-bot-text"></span><span class="gr-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/></svg></span>';
+      toggle.querySelector(".gr-bot-text").textContent = text;
+    }
+  }
+
   function ensureDraftToggle(list) {
     const n = list.querySelectorAll(":scope > [data-gr-draft]").length;
     let toggle = list.querySelector(":scope > .gr-draft-toggle");
