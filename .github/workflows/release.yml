@@ -13,7 +13,8 @@ name: Release
 #      nothing is released (the next run picks it up). The GitHub release vX.Y.Z gets both zips and
 #      the pull requests since the last tag.
 # Re-running a failed run is safe: build computes the same version from the same commit, and
-# publish finds the tag already pushed and goes on to (re)publish the release.
+# publish finds its own tag already pushed and goes on to (re)publish the release. A tag made by
+# another run (from another commit) stops it, and an older release never takes "Latest".
 # Actions → Release → Run workflow forces a bump (e.g. to ship a docs-only change) or a dry run.
 on:
   push:
@@ -111,12 +112,18 @@ jobs:
           path: dist
 
       # Fast-forward only, main and the tag together (--atomic). A re-run finds the tag already
-      # pushed, checks that main holds it, and goes on to publish.
+      # pushed and goes on to publish, but only when that tag is this run's release commit (its
+      # parent is the commit this run built); otherwise another run released this version from a
+      # different commit, and these packages must not replace its zips.
       - name: Commit, tag and push to main
         run: |
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
             echo "$TAG is already tagged."
-            git fetch -q origin main
+            git fetch -q --force origin main "refs/tags/$TAG:refs/tags/$TAG"
+            if [ "$(git rev-parse "$TAG^{commit}^")" != "$GITHUB_SHA" ]; then
+              echo "::error::$TAG was released from another commit, not $GITHUB_SHA. Nothing to do for this run."
+              exit 1
+            fi
             if ! git merge-base --is-ancestor "$TAG" origin/main; then
               echo "::error::$TAG exists but main does not contain it. Fix main or delete the tag, then run the release again."
               exit 1
@@ -140,9 +147,13 @@ jobs:
           [ -n "$previous" ] && fields+=(-f previous_tag_name="$previous")
           gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" "${fields[@]}" --jq .body > "$RUNNER_TEMP/notes.md"
           zips=("dist/refine-for-github-$VERSION-chrome.zip" "dist/refine-for-github-$VERSION-firefox.zip")
+          # Latest only when no higher version was released meanwhile (a re-run of an older release).
+          git fetch -q --tags origin
+          highest=$(git tag --sort=-v:refname | grep -Ex 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          latest=$([ "$highest" = "$TAG" ] && echo true || echo false)
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --latest
+            gh release edit "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --latest="$latest"
             gh release upload "$TAG" "${zips[@]}" --clobber
           else
-            gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag --latest "${zips[@]}"
+            gh release create "$TAG" --title "$TAG" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag --latest="$latest" "${zips[@]}"
           fi
