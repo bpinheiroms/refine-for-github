@@ -46,3 +46,5 @@ jobs:
           fi
       - name: Package
         run: ./scripts/package.sh
+      - name: Lint Firefox package
+        run: npx --yes web-ext@10.8.0 lint --source-dir dist/firefox --warnings-as-errors

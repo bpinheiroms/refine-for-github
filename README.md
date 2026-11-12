@@ -27,13 +27,30 @@ A Chrome extension (Manifest V3) that adds a design layer on top of GitHub, focu
 
 After editing the code, click ⟳ on the extension in `chrome://extensions` and reload the tab. The loaded version is visible in the console with `document.documentElement.dataset.grVersion`.
 
-## Publish to the Chrome Web Store
+## Releases
 
-1. `./scripts/package.sh` builds `dist/refine-for-github-<version>.zip` (only the `extension/` folder).
-2. Upload the zip in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole).
-3. Fill in the listing with the text and images from [`store/LISTING.md`](store/LISTING.md).
-4. The privacy policy ([`PRIVACY.md`](PRIVACY.md)) is published at https://gist.github.com/bpinheiroms/8629584043c4948f0b6706369979874a.
-5. For every new release, bump `version` in `extension/manifest.json` and build the zip again.
+Releases are automatic. Never edit `version` in `extension/manifest.json` by hand.
+
+1. Pull request titles are [Conventional Commits](https://www.conventionalcommits.org/) (checked by the `PR title` workflow), because the squash commit on `main` uses the title.
+2. When a pull request is merged into `main`, the [Release workflow](.github/workflows/release.yml) reads the commits since the last tag and picks the next version: `feat` → minor, `fix`/`perf`/`revert` → patch, `!` → major. `docs`, `ci`, `chore`, `refactor`, `test`… release nothing.
+3. It writes the version into the manifest, commits `release: vX.Y.Z` to `main` and tags it (with the `RELEASE_DEPLOY_KEY` deploy key, which the `main` ruleset lets through), then publishes GitHub release `vX.Y.Z` with:
+   - `refine-for-github-X.Y.Z-chrome.zip` for the Chrome Web Store
+   - `refine-for-github-X.Y.Z-firefox.zip` for addons.mozilla.org
+
+**Actions → Release → Run workflow** forces a bump (for example to ship a docs-only change) or does a dry run. To build locally, run `./scripts/package.sh` (output in `dist/`; `dist/firefox/` is the unpacked Firefox build, which you can load in `about:debugging` → **This Firefox** → **Load Temporary Add-on…**).
+
+### Chrome Web Store
+
+1. Download the Chrome zip from the release and upload it in the [Developer Dashboard](https://chrome.google.com/webstore/devconsole) (**Package → Upload new package**, then **Submit for review**).
+2. The listing text and images are in [`store/LISTING.md`](store/LISTING.md).
+3. The privacy policy ([`PRIVACY.md`](PRIVACY.md)) is published at https://gist.github.com/bpinheiroms/8629584043c4948f0b6706369979874a.
+
+### Firefox Add-ons
+
+1. Download the Firefox zip from the release and upload it in the [Developer Hub](https://addons.mozilla.org/developers/) (first time: **Submit a New Add-on**, "On this site"; after that: **Upload New Version**).
+2. Source code is not needed: the package is not minified or bundled.
+3. The add-on id is `refine-for-github@bpinheiroms` (set in `scripts/package.sh`). It must never change, or Firefox treats it as a different add-on.
+4. The same listing text from [`store/LISTING.md`](store/LISTING.md) works; the extension declares that it collects no data.
 
 ## How the page is changed
 

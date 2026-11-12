@@ -2,11 +2,11 @@
 
 ## Supported versions
 
-Refine for GitHub is released from `main`. Security fixes go to `main` and ship in the next Chrome Web Store version; only the latest published version receives them.
+Refine for GitHub is released from `main`. Security fixes go to `main` and ship in the next Chrome Web Store and Firefox Add-ons version; only the latest published version receives them.
 
 | Version | Supported |
 | --- | --- |
-| Latest Chrome Web Store version and `main` | Yes |
+| Latest store version (Chrome Web Store, Firefox Add-ons) and `main` | Yes |
 | Older versions | No |
 
 ## Reporting a vulnerability
