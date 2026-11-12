@@ -1,6 +1,6 @@
-"""Gera versões em arquivo único dos protótipos (CSS/JS da extensão embutidos).
+"""Builds single-file versions of the prototypes (extension CSS/JS inlined).
 
-    python3 prototype/build.py   →  prototype/dist/index.html, prototype/dist/overview.html
+    python3 prototype/build.py   →  prototype/dist/index.html
 """
 import pathlib, re
 here = pathlib.Path(__file__).parent
@@ -23,7 +23,7 @@ def compact(html: str) -> str:
     html = re.sub(r"(^|\n)\s*//[^\n]*", r"\1", html)
     return re.sub(r"\n\s*\n+", "\n", html)
 
-for name in ["index.html", "overview.html"]:
+for name in ["index.html"]:
     html = inline((here / name).read_text())
     (out / name).write_text(html)
     (out / name.replace(".html", ".min.html")).write_text(compact(html))

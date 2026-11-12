@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Protótipo: imita o DOM da lista de PRs do GitHub (dark) e roda o content.js real da extensão. -->
+<!-- Prototype: mimics the DOM of GitHub's (dark) PR list and runs the extension's real content.js. -->
 <html lang="pt-BR" data-color-mode="dark" data-dark-theme="dark" data-light-theme="light">
 <head>
 <meta charset="utf-8" />
-<title>GitHub Refine — protótipo</title>
+<title>Refine for GitHub — prototype</title>
 <style>
-  /* Tokens "originais" do GitHub dark, para o estado desligado parecer o GitHub */
+  /* GitHub dark "original" tokens, so the off state looks like GitHub */
   html[data-color-mode="dark"][data-dark-theme="dark"] {
     --bgColor-default:#0d1117; --bgColor-muted:#151b23; --bgColor-inset:#010409; --bgColor-neutral-muted:#656c7633;
     --borderColor-default:#3d444d; --borderColor-muted:#3d444db3; --fgColor-default:#f0f6fc; --fgColor-muted:#9198a1;
@@ -42,7 +42,7 @@
   .meta { font-size:12px; color:var(--fgColor-muted); margin-top:2px; }
   .meta a { color:var(--fgColor-muted); }
 
-  /* Painel do protótipo (simula o popup) */
+  /* Prototype panel (simulates the popup) */
   .proto { position:fixed; right:16px; bottom:16px; width:250px; padding:12px; border-radius:14px; background:#17191f; border:1px solid #2a2e38; color:#e7e9ee; font:12.5px/1.4 -apple-system,sans-serif; box-shadow:0 12px 40px #0008; z-index:99; }
   .proto b { display:block; margin-bottom:6px; font-size:13px; }
   .proto label { display:flex; justify-content:space-between; padding:4px 0; cursor:pointer; }
@@ -72,12 +72,12 @@
   </div>
 
   <div class="proto" id="proto">
-    <b>Simulação do popup</b>
-    <label>Extensão ligada <input type="checkbox" data-key="enabled"></label>
-    <label>Tema Grafite <input type="checkbox" data-key="theme"></label>
-    <label>Cartões <input type="checkbox" data-key="cards"></label>
-    <label>Agrupar bots <input type="checkbox" data-key="groupBots"></label>
-    <label>Esmaecer rascunhos <input type="checkbox" data-key="dimDrafts"></label>
+    <b>Popup simulation</b>
+    <label>Extension on <input type="checkbox" data-key="enabled"></label>
+    <label>Graphite theme <input type="checkbox" data-key="theme"></label>
+    <label>Cards <input type="checkbox" data-key="cards"></label>
+    <label>Group bots <input type="checkbox" data-key="groupBots"></label>
+    <label>Dim drafts <input type="checkbox" data-key="dimDrafts"></label>
     <label>Debug <input type="checkbox" data-key="debug"></label>
     <div class="sw">
       <button data-accent="violet" style="--c:#8b7cf6"></button><button data-accent="blue" style="--c:#5b9dff"></button>
@@ -86,7 +86,7 @@
   </div>
 
 <script>
-  // Dados de exemplo
+  // Sample data
   const PRS = [
     { n: 140, t: "build(deps): bump undici from 7.1.0 to 7.2.0", a: "dependabot", s: "open", u: "2 days ago" },
     { n: 139, t: "build(deps): bump actions/cache from 5 to 6", a: "dependabot", s: "open", u: "3 days ago" },
@@ -109,7 +109,7 @@
       </div>
     </li>`).join("");
 
-  // Stub mínimo de chrome.storage para rodar o content script fora da extensão
+  // Minimal chrome.storage stub to run the content script outside the extension
   const listeners = [];
   let store = {};
   window.chrome = { storage: {

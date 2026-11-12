@@ -1,8 +1,8 @@
-// Stub de chrome.storage para rodar o content script fora da extensão,
-// e ligação do painel "Simulação do popup" (#proto) às configurações.
+// chrome.storage stub to run the content script outside the extension,
+// and wiring of the "Popup simulation" panel (#proto) to the settings.
 (() => {
   const listeners = [];
-  // ?off = extensão desligada (para comparar antes/depois); ?toc = índice já aberto
+  // ?off = extension off (to compare before/after); ?toc = table of contents open
   const params = new URLSearchParams(location.search);
   const store = params.has("off") ? { enabled: false } : {};
   window.chrome = {

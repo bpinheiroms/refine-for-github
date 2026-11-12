@@ -1,8 +1,8 @@
 version: 2
 
-# A extensão não tem dependências de pacote; só as actions dos workflows, fixadas por SHA.
-# `cooldown` espera alguns dias antes de propor uma versão nova: um pacote comprometido
-# costuma ser descoberto e removido nesse tempo.
+# The extension has no package dependencies; only the workflow actions, pinned by SHA.
+# `cooldown` waits a few days before proposing a new release: a compromised package
+# is usually found and pulled within that time.
 updates:
   - package-ecosystem: github-actions
     directory: /

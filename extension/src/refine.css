@@ -1,12 +1,12 @@
 /* GitHub Refine
- * Tudo aqui é escopado por atributos `data-gr-*` no <html>, que o content script
- * liga/desliga conforme o popup. Sem atributo, nenhuma regra se aplica.
+ * Everything here is scoped by `data-gr-*` attributes on <html>, which the content script
+ * toggles according to the popup. Without an attribute, no rule applies.
  */
 
 /* =========================================================================
-   1. TEMA — sobrescreve os tokens do Primer (design system do GitHub).
-   O GitHub define os tokens em `html[data-color-mode][data-dark-theme]`;
-   nossos seletores têm especificidade maior para vencer sem !important.
+   1. THEME — overrides the Primer tokens (GitHub's design system).
+   GitHub defines the tokens on `html[data-color-mode][data-dark-theme]`;
+   our selectors have higher specificity to win without !important.
    ========================================================================= */
 
 html[data-gr-theme][data-color-mode][data-light-theme] {
@@ -19,7 +19,7 @@ html[data-gr-theme][data-color-mode][data-light-theme] {
   --gr-shadow-hover: 0 1px 2px rgb(0 0 0 / 0.06), 0 6px 18px rgb(0 0 0 / 0.08);
 }
 
-/* Paleta "Grafite" para o modo escuro */
+/* "Graphite" palette for dark mode */
 html[data-gr-theme][data-color-mode="dark"][data-dark-theme] {
   --bgColor-default: #0f1014;
   --bgColor-muted: #15171d;
@@ -31,7 +31,7 @@ html[data-gr-theme][data-color-mode="dark"][data-dark-theme] {
   --fgColor-muted: #8a91a2;
   --overlay-bgColor: #17191f;
   --header-bgColor: #0b0c0f;
-  /* nomes legados, ainda usados em telas antigas */
+  /* legacy names, still used on older screens */
   --color-canvas-default: var(--bgColor-default);
   --color-canvas-subtle: var(--bgColor-muted);
   --color-border-default: var(--borderColor-default);
@@ -56,7 +56,7 @@ html[data-gr-theme][data-color-mode="dark"][data-dark-theme] {
   }
 }
 
-/* Acento (links, aba ativa, foco). O verde do botão principal vira a cor de acento. */
+/* Accent (links, active tab, focus). The primary button green becomes the accent color. */
 html[data-gr-theme][data-gr-accent="violet"] { --gr-accent: #8b7cf6; --gr-accent-strong: #6d5df0; }
 html[data-gr-theme][data-gr-accent="blue"]   { --gr-accent: #5b9dff; --gr-accent-strong: #2f7bf5; }
 html[data-gr-theme][data-gr-accent="green"]  { --gr-accent: #3ecf8e; --gr-accent-strong: #1fa971; }
@@ -64,8 +64,8 @@ html[data-gr-theme][data-gr-accent="orange"] { --gr-accent: #ff9a4d; --gr-accent
 
 html[data-gr-theme][data-gr-accent][data-color-mode][data-dark-theme] {
   --fgColor-accent: var(--gr-accent);
-  /* fundos/bordas "accent muted" no mesmo tom do acento (antes ficavam azuis
-     atrás de texto roxo, ex.: os valores "pr"/"open" na busca da lista) */
+  /* "accent muted" backgrounds/borders in the same hue as the accent (they used to be blue
+     behind purple text, e.g. the "pr"/"open" values in the list search) */
   --bgColor-accent-muted: color-mix(in srgb, var(--gr-accent) 16%, transparent);
   --borderColor-accent-muted: color-mix(in srgb, var(--gr-accent) 40%, transparent);
   --bgColor-accent-emphasis: var(--gr-accent-strong);
@@ -84,7 +84,7 @@ html[data-gr-theme] body {
   letter-spacing: -0.005em;
 }
 
-/* Contadores (Pull requests 7) como pílulas discretas */
+/* Counters (Pull requests 7) as subtle pills */
 html[data-gr-theme] .Counter {
   background: var(--bgColor-neutral-muted);
   color: var(--fgColor-muted);
@@ -93,7 +93,7 @@ html[data-gr-theme] .Counter {
 }
 
 /* =========================================================================
-   2. LISTAS EM CARTÕES — linhas marcadas pelo content script
+   2. CARD LISTS — rows marked by the content script
    ========================================================================= */
 
 html[data-gr-cards] [data-gr-list] {
@@ -118,7 +118,7 @@ html[data-gr-cards] [data-gr-row]:hover {
   transform: translateY(-1px);
 }
 
-/* Faixa de estado à esquerda */
+/* State stripe on the left */
 html[data-gr-cards] [data-gr-row]::before {
   content: "";
   position: absolute;
@@ -137,7 +137,7 @@ html[data-gr-cards] [data-gr-title] {
   letter-spacing: -0.01em;
 }
 
-/* Etiqueta "Rascunho" ao lado do título, só com CSS */
+/* "Draft" label next to the title, CSS only */
 html[data-gr-cards] [data-gr-state="draft"] [data-gr-title]::after {
   content: "Draft";
   display: inline-block;
@@ -152,20 +152,20 @@ html[data-gr-cards] [data-gr-state="draft"] [data-gr-title]::after {
 }
 
 /* =========================================================================
-   3. RASCUNHOS ESMAECIDOS
+   3. DIMMED DRAFTS
    ========================================================================= */
 
 html[data-gr-dim-drafts] [data-gr-row][data-gr-state="draft"] { opacity: 0.55; }
 html[data-gr-dim-drafts] [data-gr-row][data-gr-state="draft"]:hover { opacity: 1; }
 
 /* =========================================================================
-   4. BOTS AGRUPADOS — reordenados com `order` (sem mover nós do React)
+   4. GROUPED BOTS — reordered with `order` (without moving React nodes)
    ========================================================================= */
 
 html[data-gr-group-bots] [data-gr-list] { display: flex; flex-direction: column; }
 html[data-gr-group-bots] [data-gr-list] > * { order: 0; }
 html[data-gr-group-bots] [data-gr-list] > .gr-bot-toggle:not(.gr-draft-toggle) { order: 9; }
-/* Drafts agrupados antes dos bots */
+/* Drafts grouped before bots */
 html[data-gr-group-bots] [data-gr-list] > .gr-draft-toggle { order: 7; }
 html[data-gr-group-bots] [data-gr-list] > [data-gr-draft] { order: 8; }
 html[data-gr-group-bots] [data-gr-list]:not([data-gr-drafts-open]):has(> .gr-draft-toggle) > [data-gr-draft] { display: none !important; }
@@ -201,7 +201,7 @@ html[data-gr-group-bots] .gr-bot-toggle:hover { color: var(--fgColor-default); b
 [data-gr-bots-open] > .gr-bot-toggle:not(.gr-draft-toggle) .gr-chevron { transform: rotate(90deg); }
 
 /* =========================================================================
-   5. LEITURA — markdown (descrição do PR, comentários, README)
+   5. READING — markdown (PR description, comments, README)
    ========================================================================= */
 
 html[data-gr-readable] .markdown-body {
@@ -230,18 +230,18 @@ html[data-gr-readable] [data-gr-pr-title] {
 }
 
 /* =========================================================================
-   5b. PÁGINA DO PR
+   5b. PR PAGE
    ========================================================================= */
 
-/* Contadores das abas (Commits 4, Checks 5...). No React a classe é
-   `prc-CounterLabel-<hash>`: o prefixo é estável, só o hash muda. */
+/* Tab counters (Commits 4, Checks 5...). In React the class is
+   `prc-CounterLabel-<hash>`: the prefix is stable, only the hash changes. */
 html[data-gr-theme] [class*="CounterLabel"] {
   background: var(--bgColor-neutral-muted) !important;
   color: var(--fgColor-muted) !important;
   font-weight: 600;
 }
 
-/* Selo de estado: de bloco chapado para pílula suave */
+/* State badge: from solid block to soft pill */
 html[data-gr-theme] [data-gr-state-pill] {
   --gr-pill: var(--fgColor-success, #3fb950);
   background: color-mix(in srgb, var(--gr-pill) 14%, transparent) !important;
@@ -260,7 +260,7 @@ html[data-gr-theme] :is([data-gr-pr-state="merged"], [data-gr-pr-state="mesclado
 html[data-gr-theme] :is([data-gr-pr-state="closed"], [data-gr-pr-state="fechado"])[data-gr-state-pill] { --gr-pill: var(--fgColor-danger, #f85149); }
 html[data-gr-theme] :is([data-gr-pr-state="draft"], [data-gr-pr-state="rascunho"])[data-gr-state-pill] { --gr-pill: var(--fgColor-muted, #9198a1); }
 
-/* Título: menor e mais leve (o "#81" e a barra fixa já identificam a PR) */
+/* Title: smaller and lighter (the "#81" and the sticky bar already identify the PR) */
 html[data-gr-theme] [data-gr-pr-title] {
   font-size: 24px !important;
   line-height: 32px !important;
@@ -268,7 +268,7 @@ html[data-gr-theme] [data-gr-pr-title] {
   letter-spacing: -0.02em;
 }
 
-/* Branches: chips monoespaçados discretos */
+/* Branches: subtle monospace chips */
 html[data-gr-theme] [data-gr-branch] {
   background: var(--bgColor-neutral-muted) !important;
   color: var(--fgColor-muted) !important;
@@ -277,10 +277,10 @@ html[data-gr-theme] [data-gr-branch] {
   font: 500 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace !important;
 }
 
-/* Barra lateral / aba Details: uma lista uniforme.
-   Toda seção tem o mesmo respiro e a mesma divisória; vazias viram uma linha
-   "Nome ........ None yet" (engrenagem aparece no hover); preenchidas mostram o
-   nome em destaque e o conteúdo embaixo. Sem esmaecer e sem fundos parciais. */
+/* Sidebar / Details tab: one uniform list.
+   Every section has the same spacing and divider; empty ones become a single line
+   "Name ........ None yet" (gear shows on hover); filled ones show the
+   name prominently with the content below. No dimming and no partial backgrounds. */
 html[data-gr-compact-sidebar] [data-gr-sb] {
   margin: 0 !important; padding: 12px 0 !important; opacity: 1 !important;
   border: 0 !important; border-top: 1px solid var(--borderColor-muted) !important; background: none !important;
@@ -289,7 +289,7 @@ html[data-gr-compact-sidebar] [data-gr-sb]:first-of-type { border-top: 0 !import
 html[data-gr-compact-sidebar] [data-gr-sb] :is(h2, h3, [class*="Heading"], [class*="sectionTitle"], [class*="SectionTitle"]) {
   font: 600 13px/20px var(--fontStack-sansSerif, sans-serif) !important; color: var(--fgColor-default) !important; margin: 0 !important;
 }
-/* fundos de hover do GitHub que pintam só parte da linha */
+/* GitHub hover backgrounds that paint only part of the row */
 html[data-gr-compact-sidebar] [data-gr-sb] :is([role="button"], button:not([data-component="IconButton"]), summary, a):hover { background: none !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] {
   display: flex !important; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 8px;
@@ -304,10 +304,10 @@ html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover [data-component=
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover button:has(svg) { opacity: 1; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] a { text-decoration: none !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] a:hover { text-decoration: underline !important; color: var(--fgColor-default) !important; }
-/* labels preenchidas: pílulas um pouco menores */
+/* filled labels: slightly smaller pills */
 html[data-gr-compact-sidebar] [data-gr-sb="labels"] [data-component="Label"], html[data-gr-compact-sidebar] [data-gr-sb="labels"] .IssueLabel { font-size: 12px !important; }
 
-/* Número da PR ao lado do título (nosso botão ou o "#123" do próprio GitHub) */
+/* PR number next to the title (our button or GitHub's own "#123") */
 .gr-pr-num { display: none; }
 html[data-gr-pr-number] .gr-pr-num,
 html[data-gr-pr-number] [data-gr-pr-num] {
@@ -331,14 +331,14 @@ html[data-gr-pr-number] .gr-pr-num:hover {
   border-color: var(--gr-accent, var(--fgColor-accent));
 }
 
-/* Seletor "Preview" (interface nova): destacado, com dica de como voltar */
-/* (sem destaque: o contorno tracejado e a dica "back to classic" poluíam o topo;
-   o seletor Preview do GitHub continua no lugar, com o título explicando) */
+/* "Preview" toggle (new UI): highlighted, with a hint on how to go back */
+/* (no highlight: the dashed outline and the "back to classic" hint cluttered the top;
+   GitHub's Preview toggle stays in place, with the title explaining it) */
 
 /* =========================================================================
-   5c. COCKPIT — Overview como "o que falta para o merge" (src/cockpit.js)
-   Com o resumo carregado (data-gr-cockpit-ready), as caixas originais ficam
-   escondidas; os botões do cockpit reabrem cada uma (data-gr-show-*).
+   5c. COCKPIT — Overview as "what's left before merge" (src/cockpit.js)
+   Once the summary is loaded (data-gr-cockpit-ready), the original boxes are
+   hidden; the cockpit buttons reopen each one (data-gr-show-*).
    ========================================================================= */
 
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-mergebox],
@@ -348,24 +348,24 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar
 #gr-panel { display: none; }
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) #gr-panel { display: block; }
 
-/* Comentários da Overview nova: ficam na aba Comments do painel, não na coluna.
-   Commits e a caixa de novo comentário continuam no lugar. */
+/* New Overview comments: they live in the panel's Comments tab, not in the column.
+   Commits and the new-comment box stay in place. */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) main [data-testid="timeline-item"]:has(article:is([id^="issuecomment-"], [id^="pullrequestreview-"])),
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments) > [class*="controlsRow"],
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments) form:has(textarea) {
   display: none !important;
 }
-/* O que sobra da seção são os commits */
+/* What remains of the section is the commits */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) section:has(#overview-comments)::before {
   content: "Commits"; display: block; margin: 8px 0 12px; font: 600 16px var(--fontStack-sansSerif, sans-serif); color: var(--fgColor-default);
 }
-/* Novo comentário, no topo da aba Comments */
+/* New comment, at the top of the Comments tab */
 #gr-panel .gr-new { margin: 0 0 12px; padding: 10px; border: 1px solid var(--borderColor-muted); border-radius: 10px; background: var(--bgColor-muted); }
 #gr-panel .gr-new .gr-reply { min-height: 64px; font-size: 13px; }
 #gr-panel .gr-new .gr-cbar { margin-top: 8px; }
-/* Alinhamento: o GitHub centraliza o cabeçalho numa caixa de 1356px. As colunas
-   (cockpit + painel) usam a mesma caixa, e a barra fixa de cima também, então
-   título, abas, cockpit e painel começam e terminam nas mesmas linhas. */
+/* Alignment: GitHub centers the header in a 1356px box. The columns
+   (cockpit + panel) use the same box, and so does the sticky top bar, so
+   title, tabs, cockpit and panel start and end on the same lines. */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] {
   max-width: 1356px !important; margin-inline: auto !important; justify-content: flex-start !important;
 }
@@ -380,8 +380,8 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [class*="miniHeaderInner"
   padding-right: calc(32px + max(0px, (100% - 1420px) / 2)) !important;
 }
 
-/* Aba Details quando a barra lateral não pode entrar no painel: ela aparece
-   na coluna da direita e as abas do painel ficam por cima, no topo dela. */
+/* Details tab when the sidebar can't go into the panel: it shows up
+   in the right column and the panel tabs sit above it, at its top. */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [data-gr-cols] { position: relative !important; }
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] #gr-panel {
   position: absolute; top: 0; right: 0; width: var(--gr-pw); max-height: none; overflow: visible; z-index: 3;
@@ -394,9 +394,9 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [da
   flex: 1 1 auto !important; width: auto !important; max-width: none !important; margin: 0 !important;
 }
 
-/* Painel da direita: no lugar da barra lateral, fixo enquanto a página rola */
+/* Right panel: in place of the sidebar, sticky while the page scrolls */
 #gr-panel {
-  order: 99; /* o Primer ordena as colunas com `order`; o painel vai para o fim (direita) */
+  order: 99; /* Primer orders the columns with `order`; the panel goes last (right) */
   flex: 0 0 var(--gr-pw);
   align-self: flex-start;
   position: sticky;
@@ -408,10 +408,10 @@ html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar] [da
   font: 13px/1.45 var(--fontStack-sansSerif, -apple-system, sans-serif);
   color: var(--fgColor-default);
 }
-/* Tela estreita: painel logo abaixo do cockpit, sem ficar fixo */
+/* Narrow screen: panel right below the cockpit, not sticky */
 #gr-panel[data-stacked] {
-  /* Na Overview nova o pai é um flex em coluna: sem isso o painel vai para o fim
-     (order: 99) e encolhe até a largura do conteúdo (cards espremidos). */
+  /* In the new Overview the parent is a column flex: without this the panel goes last
+     (order: 99) and shrinks to its content width (squeezed cards). */
   order: 0; align-self: stretch; width: 100%; min-width: 0;
   position: static; flex: none; max-height: none; overflow: visible; margin: 0 0 24px; padding: 0;
 }
@@ -430,7 +430,7 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
   border: 0; border-radius: 8px; background: none; color: var(--fgColor-muted); font: 500 12.5px var(--fontStack-sansSerif, sans-serif); cursor: pointer;
 }
 #gr-panel .gr-tab:hover { color: var(--fgColor-default); }
-/* O painel se ajusta à própria largura (não à da janela): abas mais compactas quando aperta */
+/* The panel adapts to its own width (not the window's): more compact tabs when tight */
 #gr-panel { container-type: inline-size; }
 #gr-panel .gr-tab { min-width: 0; white-space: nowrap; }
 @container (max-width: 400px) {
@@ -442,7 +442,7 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
   #gr-panel .gr-tab { padding: 0 5px; gap: 4px; font-size: 11.5px; }
   #gr-panel .gr-rep { font-size: 10.5px; }
 }
-/* Conversas sem resolver: o contador da aba fica em destaque (é o que bloqueia o merge) */
+/* Unresolved conversations: the tab counter is highlighted (it is what blocks the merge) */
 #gr-panel .gr-tab.gr-attn .gr-n { background: var(--bgColor-attention-emphasis, #9e6a03) !important; color: #fff !important; }
 #gr-panel .gr-tab[aria-selected="true"] { background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-default); font-weight: 600; }
 #gr-panel .gr-n { font-variant-numeric: tabular-nums; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--bgColor-muted); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
@@ -450,7 +450,7 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
 #gr-panel .gr-empty p { margin: 0 0 10px; }
 #gr-panel .gr-empty { margin: 16px 4px; color: var(--fgColor-muted); font-size: 12.5px; text-align: center; }
 #gr-panel .gr-card.gr-done { opacity: 0.7; }
-/* Aba Details: a barra lateral original do GitHub, dentro do painel */
+/* Details tab: GitHub's original sidebar, inside the panel */
 #gr-panel .gr-details { padding: 2px 6px; }
 #gr-panel .gr-details [data-gr-sb] { padding-block: 10px !important; border-top: 1px solid var(--borderColor-muted) !important; }
 #gr-panel .gr-details [data-gr-sb]:first-of-type { border-top: 0 !important; }
@@ -472,13 +472,13 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
 #gr-panel .gr-meta .gr-who { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #gr-panel .gr-rep { flex: none; padding: 0 8px; border-radius: 999px; background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-muted); font: 500 11px/18px var(--fontStack-sansSerif, sans-serif); }
 #gr-panel .gr-rep.gr-rep-new { background: color-mix(in srgb, var(--gr-accent, var(--fgColor-accent)) 22%, transparent); color: var(--gr-accent, var(--fgColor-accent)); }
-/* Resposta de outra pessoa: o destaque fica só no selo "X replied" (sem borda colorida no cartão) */
+/* Reply from someone else: the highlight is only on the "X replied" badge (no colored border on the card) */
 #gr-panel .gr-ct { font-size: 13px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 #gr-panel .gr-who { display: flex; align-items: center; gap: 6px; color: var(--fgColor-muted); font-size: 11.5px; }
 #gr-panel .gr-who img { width: 14px; height: 14px; border-radius: 50%; }
 
-/* Modal com a conversa inteira (cópia só de leitura) */
-/* Conversa aberta: gaveta à direita, no mesmo padrão dos painéis do GitHub */
+/* Modal with the full conversation (read-only copy) */
+/* Open conversation: right-side drawer, same pattern as GitHub's panels */
 #gr-modal { position: fixed; inset: 0; z-index: 200; display: flex; justify-content: flex-end; background: rgb(1 4 9 / 0.3); }
 #gr-modal .gr-mbox {
   width: min(600px, 100vw); height: 100dvh; display: flex; flex-direction: column; overflow: hidden;
@@ -488,7 +488,7 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
 #gr-modal .gr-mbody { flex: 1; }
 @media (prefers-reduced-motion: reduce) { #gr-modal .gr-mbox { animation: none; } }
 #gr-modal .gr-btn { white-space: nowrap; }
-/* Celular: o modal ocupa a tela inteira */
+/* Mobile: the modal takes the full screen */
 @media (max-width: 640px) {
   #gr-modal .gr-mbox { width: 100%; border: 0; }
   #gr-modal .gr-mbody { padding: 12px; }
@@ -581,13 +581,13 @@ html[data-gr-show-sidebar] #gr-panel[data-stacked] { position: static !important
 
 #gr-cockpit .gr-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 12px; font-size: 12px; }
 #gr-cockpit .gr-foot .gr-orig { margin-left: auto; }
-/* Só aparece quando a Overview original está à vista (ex.: depois de "Open in place"), para voltar */
+/* Only shown when the original Overview is visible (e.g. after "Open in place"), to go back */
 html:not([data-gr-cockpit-off]) #gr-cockpit .gr-orig { display: none; }
-/* Feito: uma linha discreta, sem disputar atenção com o que falta */
+/* Done: a subtle line, not competing for attention with what's left */
 #gr-cockpit .gr-donerow { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 20px; border-top: 1px solid var(--gr-line2); color: var(--gr-mut); font-size: 12px; }
 #gr-cockpit .gr-donerow i { font-style: normal; color: var(--gr-ok); margin-right: 6px; }
 #gr-cockpit .gr-todo > .gr-donerow:first-child { border-top: 0; }
-/* Menu "More actions" */
+/* "More actions" menu */
 #gr-cockpit .gr-more { position: relative; }
 #gr-cockpit .gr-more summary { list-style: none; cursor: pointer; color: var(--gr-mut); }
 #gr-cockpit .gr-more summary::-webkit-details-marker { display: none; }
@@ -604,16 +604,16 @@ html:not([data-gr-cockpit-off]) #gr-cockpit .gr-orig { display: none; }
 #gr-cockpit .gr-foot > button:hover { color: var(--fgColor-default); }
 #gr-cockpit .gr-foot > .gr-d:hover { color: var(--gr-bad); }
 #gr-cockpit .gr-foot .gr-orig { margin-left: auto; }
-/* Só aparece quando a Overview original está à vista (ex.: depois de "Open in place"), para voltar */
+/* Only shown when the original Overview is visible (e.g. after "Open in place"), to go back */
 html:not([data-gr-cockpit-off]) #gr-cockpit .gr-orig { display: none; }
 
 #gr-cockpit .gr-notice { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 10px 14px; border: 1px dashed var(--gr-line); border-radius: 10px; font-size: 13px; color: var(--gr-mut); }
 #gr-cockpit .gr-notice b { color: var(--fgColor-default); }
 
-/* Rolagem até o título deixa espaço para o cabeçalho fixo do GitHub */
+/* Scrolling to the title leaves room for GitHub's sticky header */
 html[data-gr-toc] .markdown-body :is(h1, h2, h3) { scroll-margin-top: 90px; }
 
-/* Índice flutuante (nó da extensão, fora do React) */
+/* Floating table of contents (extension node, outside React) */
 #gr-toc { display: none; }
 html[data-gr-toc] #gr-toc {
   display: flex;
@@ -691,7 +691,7 @@ html[data-gr-toc] #gr-toc {
 }
 
 /* =========================================================================
-   6. DEBUG — mostra o que a extensão reconheceu (útil quando o GitHub muda o HTML)
+   6. DEBUG — shows what the extension recognized (useful when GitHub changes the HTML)
    ========================================================================= */
 
 html[data-gr-debug] [data-gr-list]  { outline: 2px dashed #f0b72f !important; }
@@ -712,13 +712,13 @@ html[data-gr-debug] [data-gr-row]::after {
 }
 html[data-gr-debug] [data-gr-row][data-gr-bot]::after { content: attr(data-gr-state) " · bot"; }
 
-/* Conversa clássica movida para o modal: a caixa de resposta e o "Resolve" do GitHub
-   ficam escondidos (continuam funcionando por trás do nosso campo). */
+/* Classic conversation moved into the modal: GitHub's reply box and "Resolve"
+   are hidden (they keep working behind our field). */
 #gr-modal .gr-mbody :is(.review-thread-reply, .js-inline-comment-form-container, .js-resolvable-thread-toggler-container, .js-toggle-inline-comment-form) { display: none !important; }
 
-/* Cabeçalho do PR: título e ações (Preview, Code, sino) sempre na mesma linha.
-   Em telas médias o GitHub joga as ações para uma linha própria acima do título. 
-   (Só a partir de 768px: no celular o título precisa da largura toda.) */
+/* PR header: title and actions (Preview, Code, bell) always on the same line.
+   On medium screens GitHub pushes the actions to their own line above the title.
+   (Only from 768px up: on mobile the title needs the full width.) */
 @media (min-width: 768px) {
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] {
   grid-template-columns: minmax(0, 1fr) auto !important; grid-template-areas: none !important; column-gap: 16px !important;
@@ -731,20 +731,20 @@ html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHe
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > :not([class*="prc-PageHeader-TitleArea-"]):not([class*="prc-PageHeader-Actions-"]) { grid-column: 1 / -1 !important; }
 }
 
-/* Topo da PR mais enxuto: menos espaço entre título, metadados e abas */
+/* Tighter PR top: less space between title, metadata and tabs */
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 12px !important; }
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-Description-"] { padding-top: 4px !important; }
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-Navigation-"] { padding-top: 4px !important; }
 #gr-panel .gr-empty-acts { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 
-/* Título + #número + copiar + lápis fluem como texto: o lápis vem logo depois do
-   título (na mesma linha do fim do título), nunca isolado no canto. */
+/* Title + #number + copy + pencil flow as text: the pencil comes right after the
+   title (on the same line as the title's end), never isolated in the corner. */
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] [class*="titleWithAction"] { display: block !important; }
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] [class*="titleWithAction"] > :first-child { display: inline !important; }
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] [class*="titleSuffix"] { display: inline-flex !important; vertical-align: middle; margin-left: 2px; position: relative; top: -2px; }
 
-/* Painel "Activity" do GitHub (lateral direita): menos ruído visual.
-   Links sem sublinhado, mensagens de commit sem fonte mono, texto menor e linhas mais juntas. */
+/* GitHub's "Activity" panel (right side): less visual noise.
+   Links without underline, commit messages without mono font, smaller text and tighter lines. */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] {
   font-size: 13px;
 }
@@ -754,7 +754,7 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
   font-family: inherit !important; font-size: inherit !important; background: none !important; padding: 0 !important;
 }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] :is(li, [role="listitem"]) { padding-top: 4px !important; padding-bottom: 4px !important; }
-/* Linhas do Activity: quem fez em destaque, o que fez em cinza, uma linha por evento */
+/* Activity rows: who did it highlighted, what they did in gray, one line per event */
 html[data-gr-accent] [class*="activityItem"] { padding: 5px 0 !important; }
 html[data-gr-accent] [class*="EventText"] {
   display: block !important; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--fgColor-muted) !important;
@@ -768,8 +768,8 @@ html[data-gr-accent] [class*="EventText"] [data-component="Label"], html[data-gr
 html[data-gr-accent] [class*="activityBadge"] { opacity: 0.55; }
 html[data-gr-accent] [class*="activityActions"] relative-time, html[data-gr-accent] [class*="timestamp"] { font-size: 12px !important; color: var(--fgColor-muted) !important; }
 
-/* Painéis laterais do GitHub (Comments, Activity): abrem como gaveta à direita,
-   por cima da página (com fundo escurecido), em vez de virar uma terceira coluna. */
+/* GitHub's side panels (Comments, Activity): open as a right-side drawer,
+   over the page (with a dimmed backdrop), instead of becoming a third column. */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"]) {
   position: fixed !important; z-index: 150 !important;
   top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important;
@@ -789,23 +789,23 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
   width: 100% !important; max-width: none !important; min-width: 0 !important; flex: 1 1 auto !important;
 }
 
-/* Título da PR: 24px também pela estrutura do Primer (o atributo data-gr-pr-title
-   pode se perder quando o React redesenha o título) e quebra equilibrada, para
-   não sobrar uma palavra sozinha na segunda linha. */
+/* PR title: 24px also via Primer's structure (the data-gr-pr-title attribute
+   can be lost when React re-renders the title) and balanced wrapping, so
+   no single word is left alone on the second line. */
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, [class*="prc-Heading"]) {
   font-size: 24px !important; line-height: 32px !important; font-weight: 600 !important; letter-spacing: -0.02em;
 }
-/* O texto do título vem num <span class="f1"> (32px) dentro do h1: herda os 24px. */
+/* The title text comes in a <span class="f1"> (32px) inside the h1: it inherits the 24px. */
 html[data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2) :is(.f1, .f2, .f3, [class*="prc-Text"]) {
   font-size: inherit !important; line-height: inherit !important; font-weight: inherit !important; letter-spacing: inherit !important;
 }
 
-/* Conteúdo da gaveta: respiro e ritmo de 4px (cabeçalho, filtros, cartões de conversa) */
+/* Drawer content: spacing and 4px rhythm (header, filters, conversation cards) */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] { padding: 4px 8px 24px !important; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] article { border-radius: 12px !important; margin-bottom: 12px !important; overflow: hidden; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [data-component="SegmentedControl"] { margin-bottom: 4px; }
 
-/* Gaveta: o seletor All / Unresolved / Mine do GitHub no mesmo estilo das nossas abas */
+/* Drawer: GitHub's All / Unresolved / Mine selector in the same style as our tabs */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-SegmentedControl-"] {
   height: auto !important; gap: 4px; padding: 4px !important;
   border: 1px solid var(--borderColor-muted) !important; border-radius: 12px !important; background: var(--bgColor-default) !important;
@@ -813,7 +813,7 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"] {
   border: 0 !important; background: none !important; margin: 0 !important; height: 32px !important;
 }
-/* sem os divisores verticais do Primer */
+/* without Primer's vertical dividers */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"]::before,
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Item-"]::after { display: none !important; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"] {
@@ -833,14 +833,14 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
   min-width: 20px; padding: 0 6px !important; border: 0 !important; border-radius: 999px !important;
   background: var(--bgColor-muted) !important; color: inherit !important; font: 600 11px/18px var(--fontStack-sansSerif, sans-serif) !important; font-variant-numeric: tabular-nums;
 }
-/* "Showing 4 of 6 review comments" mais discreto */
+/* "Showing 4 of 6 review comments" more subtle */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] { font-size: 13px; }
-/* Com uma gaveta aberta (painel do GitHub ou conversa), o índice "Contents" sai de cena */
+/* With a drawer open (GitHub panel or conversation), the "Contents" index steps aside */
 html:has([class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])) #gr-toc,
 html:has(#gr-modal) #gr-toc { display: none !important; }
 
-/* Gaveta Comments: linha de controles mais leve. Seletor ocupa o espaço, botões de
-   filtro/ordem viram ícones discretos (sem caixa) como os do cabeçalho. */
+/* Comments drawer: lighter controls row. The selector fills the space; the
+   filter/sort buttons become subtle icons (no box) like the header ones. */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="container__GZ"] { gap: 8px; align-items: center; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="viewSwitch"] { flex: 1; min-width: 0; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="controls__"] { gap: 2px; }
@@ -856,8 +856,8 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"] { display: inline-flex !important; align-items: center !important; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Content-"] { display: inline-flex !important; align-items: center !important; height: auto !important; }
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Text-"] { line-height: 20px !important; }
-/* Hover do Primer pinta só o miolo (Content) e fica "encaixado" no texto: tiramos
-   esse fundo e o hover passa a ocupar o botão inteiro, como nas nossas abas. */
+/* Primer's hover paints only the inner part (Content) and hugs the text: we remove
+   that background and the hover covers the whole button, like our tabs. */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Content-"],
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:hover [class*="prc-SegmentedControl-Content-"],
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:active [class*="prc-SegmentedControl-Content-"] {
@@ -866,22 +866,22 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Button-"]:not([aria-pressed="true"]):hover {
   background: color-mix(in srgb, var(--bgColor-neutral-muted, #262c36) 60%, transparent) !important;
 }
-/* Contador de "Unresolved": destaque (é o que falta resolver), igual ao "Open" do nosso painel */
+/* "Unresolved" counter: highlighted (it is what's left to resolve), same as "Open" in our panel */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Counter-"] [data-component="CounterLabel"] {
   background: var(--bgColor-attention-emphasis, #9e6a03) !important; color: #fff !important;
 }
 
-/* Ruído da Overview: aviso "Looking for an old friend?" e o resumo de Activity da barra lateral */
+/* Overview noise: the "Looking for an old friend?" notice and the sidebar Activity summary */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]) :is([data-gr-oldfriend], [data-gr-activity]) { display: none !important; }
 
-/* Celular (empilhado): a barra lateral do GitHub no fim vira um bloco "Details" compacto */
+/* Mobile (stacked): GitHub's sidebar at the end becomes a compact "Details" block */
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] {
   margin-top: 24px !important; padding: 16px !important; border: 1px solid var(--borderColor-muted); border-radius: 12px; background: var(--bgColor-muted);
 }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane]::before {
   content: "Details"; display: block; margin-bottom: 8px; font: 600 16px var(--fontStack-sansSerif, sans-serif); color: var(--fgColor-default);
 }
-/* Contador: só a pílula amarela, sem a "caixa" escura do wrapper em volta */
+/* Counter: just the yellow pill, without the wrapper's dark "box" around it */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-SegmentedControl-Counter-"] {
   background: none !important; padding: 0 !important; min-width: 0 !important; border: 0 !important; display: inline-flex !important;
 }
@@ -890,15 +890,15 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
   font: 600 11px/18px var(--fontStack-sansSerif, sans-serif) !important; text-align: center;
 }
 
-/* Cabeçalho único (título à vista): a barra fixa não repete número/título,
-   e Preview / Code / sino sobem para a linha dela (posição calculada em content.js). */
+/* Single header (title visible): the sticky bar doesn't repeat number/title,
+   and Preview / Code / bell move up to its line (position computed in content.js). */
 html[data-gr-one-header] [class*="miniHeaderInner"] [class*="metadata__"] { visibility: hidden; }
-/* fora do fluxo: o título usa a largura toda da linha */
+/* out of flow: the title uses the full width of the line */
 html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-Actions-"] { position: absolute !important; top: 0; right: 0; z-index: 120; opacity: 0 !important; pointer-events: none !important; }
 html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { position: relative; }
 html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] > [class*="prc-PageHeader-TitleArea-"] { grid-column: 1 / -1 !important; }
 
-/* Copiar link, ao lado do título */
+/* Copy link, next to the title */
 .gr-copy-link { display: none; }
 html[data-gr-accent] .gr-copy-link {
   display: inline-grid; place-items: center; width: 28px; height: 28px; margin-left: 6px; vertical-align: middle; position: relative; top: -1px;
@@ -907,7 +907,7 @@ html[data-gr-accent] .gr-copy-link {
 html[data-gr-accent] .gr-copy-link:hover { background: var(--bgColor-neutral-muted, #262c36); color: var(--fgColor-default); }
 html[data-gr-accent] .gr-copy-link.gr-done { color: var(--fgColor-success, #3fb950); }
 
-/* Gaveta aberta (conversa ou painel do GitHub): a página atrás não rola; o foco é a gaveta */
+/* Drawer open (conversation or GitHub panel): the page behind doesn't scroll; focus is on the drawer */
 html:has(#gr-modal),
 html[data-gr-accent]:has([class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])) {
   overflow: hidden !important; scrollbar-gutter: stable;
@@ -915,9 +915,9 @@ html[data-gr-accent]:has([class*="prc-PageLayout-SidebarWrapper-"][data-position
 #gr-modal { overscroll-behavior: contain; }
 #gr-modal .gr-mbody { overscroll-behavior: contain; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] { flex-direction: column !important; align-self: flex-start; }
-/* Empilhado (abaixo de 1120px): força uma coluna só, como no celular. A barra
-   lateral do GitHub vai para o fim da página como bloco "Details", em vez de
-   aparecer espremida à direita sem a aba Details selecionada. */
+/* Stacked (below 1120px): forces a single column, like on mobile. GitHub's
+   sidebar goes to the end of the page as a "Details" block, instead of
+   showing up squeezed on the right without the Details tab selected. */
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-cols] { flex-direction: column !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] {
   width: 100% !important; max-width: none !important; flex: none !important; position: static !important; align-self: stretch !important;
@@ -925,7 +925,7 @@ html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] {
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] > * { width: 100% !important; max-width: none !important; position: static !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-pane] [class*="VerticalDivider"] { display: none !important; }
 
-/* Menu "Actions" na barra fixa: substitui Preview, Code, sino e os botões de painel */
+/* "Actions" menu in the sticky bar: replaces Preview, Code, bell and the panel buttons */
 html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] :is([class*="divider__"], [class*="panelToggle"], [data-docked-panel-toggle]) { display: none !important; }
 html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] > div:has(> [class*="panelToggle"]) { display: none !important; }
 .gr-am-btn {
@@ -944,11 +944,11 @@ html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] > div
 .gr-am-item em { font-style: normal; color: var(--fgColor-muted); font-size: 11.5px; font-family: var(--fontStack-monospace, ui-monospace, monospace); }
 .gr-am-sep { margin: 4px 6px; border: 0; border-top: 1px solid var(--borderColor-muted); }
 
-/* PR fechada/mergeada: o GitHub já mostra o cartão "Merged / Restore branch / Revert";
-   o cockpit vazio não ocupa espaço. */
+/* Closed/merged PR: GitHub already shows the "Merged / Restore branch / Revert" card;
+   the empty cockpit takes no space. */
 #gr-cockpit:empty { display: none !important; }
 
-/* Estado vazio do painel */
+/* Panel empty state */
 #gr-panel .gr-empty {
   display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 0; padding: 32px 16px;
   border: 1px dashed var(--borderColor-muted); border-radius: 12px; text-align: center; color: var(--fgColor-muted);
@@ -964,16 +964,16 @@ html[data-gr-actions-menu] [class*="miniHeaderInner"] [class*="actions__"] > div
 #gr-panel .gr-elink { border: 0; background: none; padding: 0; color: var(--fgColor-accent); font: 500 12.5px var(--fontStack-sansSerif, sans-serif); cursor: pointer; }
 #gr-panel .gr-elink:hover { text-decoration: underline; }
 
-/* Barra fixa sempre igual ao rolar: o GitHub troca o conteúdo dela conforme a
-   rolagem (aparecem o menu de seções "☰▾" e a pílula de estado), o que faz o
-   título pular para o lado. Mantemos só "#número título copiar" + ações. */
+/* Sticky bar stays the same while scrolling: GitHub swaps its content as you
+   scroll (the "☰▾" sections menu and the state pill appear), which makes the
+   title jump sideways. We keep only "#number title copy" + actions. */
 html[data-gr-accent] [class*="miniHeaderInner"] > :not([class*="metadata__"]):not([class*="actions__"]) { display: none !important; }
 html[data-gr-accent] [class*="miniHeaderInner"] :is([data-component="StateLabel"], [class*="StateLabel"], [class*="stateLabel"]) { display: none !important; }
 html[data-gr-accent] [class*="miniHeaderInner"] [class*="metadata__"] > :not([class*="number__"]):not([class*="title__"]):not(button):not([role="tooltip"]):not([class*="Tooltip"]) { display: none !important; }
 
-/* Barra fixa sem ocupar espaço: fica por cima do conteúdo e só aparece (fundo,
-   título) depois que o título da PR sai da tela. No topo da página, só os botões
-   dela aparecem, na linha do título. */
+/* Sticky bar takes no space: it sits over the content and only appears (background,
+   title) once the PR title scrolls off screen. At the top of the page, only its
+   buttons show, on the title's line. */
 @media (min-width: 768px) {
   html[data-gr-actions-menu] [class*="stickyHeader__"][class*="StickyHeaderSlot"] { height: 0 !important; min-height: 0 !important; overflow: visible !important; z-index: 110; }
   html[data-gr-actions-menu] [class*="stickyHeader__"][class*="StickyHeaderSlot"] > * { position: absolute !important; top: 0; left: 0; right: 0; }
@@ -981,11 +981,11 @@ html[data-gr-accent] [class*="miniHeaderInner"] [class*="metadata__"] > :not([cl
   html[data-gr-one-header] [class*="miniHeaderInner"] { background: transparent !important; border-color: transparent !important; box-shadow: none !important; pointer-events: none; }
   html[data-gr-one-header] [class*="miniHeaderInner"] [class*="actions__"] { pointer-events: auto; }
   html[data-gr-one-header] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] { padding-right: var(--gr-bar-acts-w, 320px) !important; }
-  /* espaço no topo que a barra ocupava: o título encosta mais em cima */
+  /* space at the top the bar used to take: the title sits higher */
   html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 16px !important; }
 }
 
-/* Saldo de linhas (+N net) ao lado do diffstat */
+/* Line balance (+N net) next to the diffstat */
 .gr-net {
   display: inline-flex; align-items: center; margin-left: 8px; padding: 0 7px; height: 20px; vertical-align: middle;
   border-radius: 999px; font: 600 11.5px var(--fontStack-monospace, ui-monospace, monospace);
@@ -994,8 +994,8 @@ html[data-gr-accent] [class*="miniHeaderInner"] [class*="metadata__"] > :not([cl
 .gr-net[data-sign="down"] { color: var(--fgColor-done, #a371f7); background: color-mix(in srgb, var(--fgColor-done, #a371f7) 14%, transparent); }
 .gr-net[data-sign="zero"] { color: var(--fgColor-muted); background: var(--bgColor-neutral-muted, #262c36); }
 
-/* Botões primários do GitHub sempre na cor de destaque (inclusive em modais e
-   portais, que redefinem os tokens do Primer, e no estado pressionado). */
+/* GitHub primary buttons always in the accent color (including in modals and
+   portals, which redefine the Primer tokens, and in the pressed state). */
 html[data-gr-theme] :is(button, a, summary)[data-variant="primary"],
 html[data-gr-theme] :is(.btn-primary, .Button--primary) {
   background: var(--gr-accent-strong, var(--gr-accent)) !important; border-color: transparent !important; color: #fff !important;
@@ -1007,17 +1007,17 @@ html[data-gr-theme] :is(.btn-primary, .Button--primary):is(:hover, :active) {
 html[data-gr-theme] :is(button, a)[data-variant="primary"]:disabled,
 html[data-gr-theme] :is(button, a)[data-variant="primary"][aria-disabled="true"] { opacity: 0.55; }
 
-/* PR mergeada/fechada: "Submit review" sai da barra (continua no menu Actions) */
+/* Merged/closed PR: "Submit review" leaves the bar (still in the Actions menu) */
 html[data-gr-pr-done] [class*="miniHeaderInner"] [class*="actions__"] [class*="ReviewMenuButton"] { display: none !important; }
 
-/* Painel sempre colado à direita na linha das colunas, mesmo se a coluna
-   principal ainda estiver vazia. */
+/* Panel always pinned to the right on the columns row, even if the main
+   column is still empty. */
 #gr-panel:not([data-stacked]) { margin-left: auto !important; }
-/* com margin-left:auto, o espaço entre coluna e painel vem do gap */
+/* with margin-left:auto, the space between column and panel comes from the gap */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-stacked]) [data-gr-cols] { column-gap: 24px !important; }
 
-/* ===== Aba Details (barra lateral do GitHub mostrada no painel) ===== */
-/* Mesma largura do painel nas outras abas: nada empurra a coluna principal */
+/* ===== Details tab (GitHub sidebar shown in the panel) ===== */
+/* Same width as the panel on the other tabs: nothing pushes the main column */
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off])[data-gr-show-sidebar]:not([data-gr-stacked]) [data-gr-pane] {
   margin-left: 0 !important; --pane-width: var(--gr-pw) !important;
   width: var(--gr-pw) !important; min-width: 0 !important; max-width: var(--gr-pw) !important;
@@ -1026,7 +1026,7 @@ html[data-gr-show-sidebar] [data-gr-pane] [class*="VerticalDivider"],
 html[data-gr-show-sidebar] [data-gr-pane] [class*="DraggableHandle"] { display: none !important; }
 html[data-gr-show-sidebar] [data-gr-pane] :is([class*="prc-PageLayout-Pane-"], [data-testid="sticky-sidebar"]) { width: 100% !important; max-width: none !important; min-width: 0 !important; }
 
-/* Seções compactas: linha única "Nome .......... valor" quando vazia */
+/* Compact sections: single line "Name .......... value" when empty */
 html[data-gr-accent] [data-overview-sidebar-item] {
   margin: 0 !important; padding: 10px 2px !important; min-height: 0 !important; border: 0 !important;
   border-top: 1px solid var(--borderColor-muted) !important; background: none !important;
@@ -1043,7 +1043,7 @@ html[data-gr-accent] [data-overview-sidebar-item] [class*="body__"] { margin: 6p
 html[data-gr-accent] [data-overview-sidebar-item] [class*="disclosureHeader"] svg { width: 14px; height: 14px; opacity: 0; transition: opacity 0.15s; color: var(--fgColor-muted); }
 html[data-gr-accent] [data-overview-sidebar-item]:hover [class*="disclosureHeader"] svg { opacity: 1; }
 
-/* vazias: título cinza à esquerda, "None yet" à direita, na mesma linha */
+/* empty: gray title on the left, "None yet" on the right, on the same line */
 html[data-gr-accent] [data-overview-sidebar-item]:has([class*="emptyState"]):not(:has(li, img, [data-component="Label"])) {
   display: flex !important; align-items: center; gap: 12px; padding: 8px 2px !important;
 }
@@ -1054,19 +1054,19 @@ html[data-gr-accent] [data-overview-sidebar-item] [class*="emptyState"] { font-s
 html[data-gr-accent] [data-overview-sidebar-item] [class*="emptyState"] a { color: var(--fgColor-muted) !important; }
 html[data-gr-accent] [data-overview-sidebar-item] [class*="emptyState"] a:hover { color: var(--fgColor-default) !important; }
 
-/* listas (revisores etc.) mais densas */
+/* denser lists (reviewers etc.) */
 html[data-gr-accent] [data-overview-sidebar-item] li { min-height: 28px !important; padding-block: 2px !important; }
 html[data-gr-accent] [data-overview-sidebar-item] img[class*="Avatar"], html[data-gr-accent] [data-overview-sidebar-item] [data-component="Avatar"] { width: 20px !important; height: 20px !important; }
 
-/* Empilhado: commits vão para o fim da coluna (depois das conversas), sem vão grande */
+/* Stacked: commits go to the end of the column (after the conversations), without a big gap */
 html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) { display: flex !important; flex-direction: column !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) > * { order: 0; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) > :is(section:has(#overview-comments), :has(> section #overview-comments)) { order: 10 !important; margin: 8px 0 0 !important; padding-bottom: 0 !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) section:has(#overview-comments) { margin-bottom: 0 !important; padding-bottom: 0 !important; min-height: 0 !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin: 24px 0 8px !important; }
 
-/* Celular/empilhado: a barra lateral do GitHub só aparece na aba Details, logo
-   abaixo das abas (os commits continuam abaixo). */
+/* Mobile/stacked: GitHub's sidebar only shows in the Details tab, right
+   below the tabs (commits stay below). */
 html[data-gr-stacked]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar]) [data-gr-pane] { display: none !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin-bottom: 0 !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] {
@@ -1074,7 +1074,7 @@ html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-
 }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane]::before { content: none !important; display: none !important; }
 html[data-gr-stacked] #gr-panel[data-stacked] .gr-details:empty { display: none; }
-/* Índice "Contents" não aparece no celular */
+/* "Contents" index is hidden on mobile */
 @media (max-width: 899.98px) { #gr-toc { display: none !important; } }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane],
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] > *,
@@ -1086,29 +1086,29 @@ html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-
 html[data-gr-accent] [data-overview-sidebar-item][data-gr-sb] { padding-top: 8px !important; padding-bottom: 8px !important; }
 html[data-gr-accent] :has(> [data-overview-sidebar-item]) { gap: 0 !important; row-gap: 0 !important; }
 
-/* Celular: a barra fixa mostra só Status · Review · Actions enquanto o título está à vista */
+/* Mobile: the sticky bar shows only Status · Review · Actions while the title is visible */
 @media (max-width: 767.98px) {
   html[data-gr-one-header] [class*="miniHeaderInner"] { justify-content: flex-end !important; }
   html[data-gr-one-header] [class*="miniHeaderInner"] [class*="metadata__"] { display: none !important; }
   .gr-am-btn { height: 32px; }
   html[data-gr-actions-menu] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { margin-top: 12px !important; }
-  /* título um pouco menor no celular */
+  /* slightly smaller title on mobile */
   html[data-gr-accent][data-gr-accent] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, [class*="prc-Heading"]) { font-size: 20px !important; line-height: 28px !important; }
 }
 
-/* Commits da Overview: lista densa (o GitHub dá ~16px de folga em cada item) */
+/* Overview commits: dense list (GitHub gives each item ~16px of padding) */
 html[data-gr-accent] [data-testid="timeline-item"][data-item-type="commits"] { padding-block: 0 !important; margin-block: 0 !important; min-height: 0 !important; }
 html[data-gr-accent] :has(> [data-testid="timeline-item"][data-item-type="commits"]) { gap: 0 !important; row-gap: 0 !important; }
 html[data-gr-accent] [data-testid="timeline-commit-group"] { padding-block: 2px !important; margin: 0 !important; }
 html[data-gr-accent] [data-testid="timeline-commit-row"] { min-height: 28px !important; padding-block: 3px !important; margin: 0 !important; gap: 8px; }
 html[data-gr-accent] [data-testid="timeline-commit-row"] [class*="Title__"] { font-size: 13px !important; line-height: 20px !important; }
 html[data-gr-accent] [data-testid="timeline-commit-row"] :is(code, [class*="sha"], [class*="Sha"]) { font-size: 12px !important; }
-/* commits: uma linha por commit (título truncado), sem quebra no mobile */
+/* commits: one line per commit (truncated title), no wrapping on mobile */
 html[data-gr-accent] [data-testid="timeline-commit-row"] { padding-block: 2px !important; min-height: 28px !important; align-items: center !important; }
 html[data-gr-accent] [data-testid="timeline-commit-row"] [class*="Title__"] { flex: 1 1 auto; min-width: 0; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
-/* Celular + aba Details: a barra lateral do GitHub fica logo abaixo das abas e os
-   commits continuam depois dela. Os invólucros viram display:contents para que
-   tudo seja irmão no mesmo flex e o "order" funcione (sem mover nós do React). */
+/* Mobile + Details tab: GitHub's sidebar sits right below the tabs and the
+   commits follow it. The wrappers become display:contents so that
+   everything is a sibling in the same flex and "order" works (without moving React nodes). */
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-PageLayoutContent-"]:has(#gr-panel[data-stacked]) { row-gap: 0 !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-ContentWrapper-"]:has(#gr-panel[data-stacked]),
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"]:has(#gr-panel[data-stacked]),
@@ -1118,13 +1118,13 @@ html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) #gr-panel
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] { order: 5 !important; margin-bottom: 16px !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) > section:has(#overview-comments) { order: 10 !important; margin-bottom: 0 !important; }
 
-/* Busca da lista de PRs (query builder): valores dos filtros só coloridos, sem a
-   "caixinha" de fundo que ficava cortada e desalinhada com o texto. */
+/* PR list search (query builder): filter values only colored, without the
+   background "box" that got clipped and misaligned with the text. */
 html[data-gr-accent] :is(query-builder, [class*="QueryBuilder"], [data-testid*="query-builder"]) :is(.qb-filter-value, .qb-entity, .qb-constant, [class*="filterValue"], [class*="FilterValue"], [class*="qualifierValue"]) {
   background: transparent !important; box-shadow: none !important; border-radius: 0 !important;
 }
 
-/* Lista: filtro Open/Closed ativo com o mesmo visual das nossas abas (fundo + contador em acento) */
+/* List: active Open/Closed filter with the same look as our tabs (background + accent counter) */
 html[data-gr-accent] [data-gr-state-tab] {
   display: inline-flex !important; align-items: center; gap: 6px; padding: 4px 10px !important; border-radius: 8px !important;
   color: var(--fgColor-muted) !important; text-decoration: none !important; transition: background .12s, color .12s;
@@ -1138,7 +1138,7 @@ html[data-gr-accent] [data-gr-state-tab][data-gr-sel] :is([class*="Counter"], [c
   background: var(--bgColor-accent-muted) !important; color: var(--fgColor-accent) !important;
 }
 
-/* Janelas de checks do GitHub: gaveta à direita (mesmo padrão das conversas) */
+/* GitHub checks dialogs: right-side drawer (same pattern as conversations) */
 html[data-gr-accent] [data-gr-drawer] {
   position: fixed !important; inset: 0 0 0 auto !important; top: 0 !important; right: 0 !important; left: auto !important; bottom: 0 !important;
   width: min(600px, 100vw) !important; max-width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important;
@@ -1149,10 +1149,10 @@ html[data-gr-accent] [data-gr-drawer] {
   animation: gr-drawer-in 0.2s ease-out;
 }
 @media (prefers-reduced-motion: reduce) { html[data-gr-accent] [data-gr-drawer] { animation: none; } }
-/* a página não rola por trás da gaveta */
+/* the page doesn't scroll behind the drawer */
 html[data-gr-accent]:has([data-gr-drawer]) { overflow: hidden !important; }
 
-/* Files changed: linhas "@@ … @@" discretas (antes azul forte + roxo), sem competir com o código */
+/* Files changed: subtle "@@ … @@" lines (previously strong blue + purple), not competing with the code */
 html[data-gr-accent][data-color-mode][data-light-theme][data-dark-theme] {
   --diffBlob-hunkLine-bgColor: color-mix(in srgb, var(--fgColor-muted, #9198a1) 8%, transparent);
   --diffBlob-hunkNum-bgColor-rest: color-mix(in srgb, var(--fgColor-muted, #9198a1) 12%, transparent);
@@ -1166,24 +1166,24 @@ html[data-gr-accent] tr:has(> td.diff-hunk-cell) td:not(.diff-hunk-cell),
 html[data-gr-accent] tr:has(> td.diff-hunk-cell) :is(button, [class*="expand"], [class*="Expand"]) { background: color-mix(in srgb, var(--fgColor-muted, #9198a1) 10%, transparent) !important; color: var(--fgColor-muted) !important; }
 html[data-gr-accent] tr:has(> td.diff-hunk-cell) :is(button, [class*="expand"], [class*="Expand"]):hover { background: color-mix(in srgb, var(--gr-accent) 25%, transparent) !important; color: var(--fgColor-default) !important; }
 
-/* Files changed / Commits / Checks: o conteúdo ocupa a tela toda, então o cabeçalho
-   (título, abas) também, alinhado à mesma margem esquerda do conteúdo. */
+/* Files changed / Commits / Checks: the content takes the full screen, so the header
+   (title, tabs) does too, aligned to the same left margin as the content. */
 html[data-gr-fullpage] [class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-PageHeader-"] { max-width: none !important; margin-inline: 0 !important; }
 
-/* Overview também na largura toda (mesmo padrão de Files changed): colunas sem a
-   caixa de 1356px; painel mantém a largura de sempre. */
+/* Overview also full width (same pattern as Files changed): columns without the
+   1356px box; the panel keeps its usual width. */
 html[data-gr-fullpage][data-gr-cockpit-ready]:not([data-gr-cockpit-off]) [data-gr-cols] { max-width: none !important; margin-inline: 0 !important; }
-/* O GitHub foca o título ao trocar de aba: sem o contorno branco em volta dele */
+/* GitHub focuses the title when switching tabs: no white outline around it */
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2, a):focus:not(:focus-visible),
 html[data-gr-accent] [class*="prc-PageHeader-TitleArea-"] :is(h1, h2)[tabindex="-1"]:focus { outline: none !important; box-shadow: none !important; }
 @media (min-width: 768px) {
   html[data-gr-fullpage][data-gr-actions-menu][data-gr-accent] [class*="miniHeaderInner"] { padding-left: var(--gr-pad-l, 24px) !important; padding-right: var(--gr-pad-r, 24px) !important; max-width: none !important; }
 }
 
-/* ---------- Painel Merge status (gaveta à direita) ---------- */
-/* ocupa a altura toda da gaveta (o GitHub fixa um max-height calculado) */
+/* ---------- Merge status panel (right-side drawer) ---------- */
+/* takes the drawer's full height (GitHub sets a computed max-height) */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] > .height-full { max-height: none !important; height: 100% !important; }
-/* seções: menos altura, ícone menor e alinhado ao título */
+/* sections: less height, smaller icon aligned with the title */
 html[data-gr-accent] [data-testid="mergebox-border-container"] > section [class*="wrapper"] { padding: 12px 16px !important; align-items: center; }
 html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 { margin-right: 12px !important; align-self: flex-start; margin-top: 2px; }
 html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 > div,
@@ -1192,9 +1192,9 @@ html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.f
 html[data-gr-accent] [data-testid="mergebox-border-container"] > section .mr-2.flex-shrink-0 svg.octicon { width: 14px !important; height: 14px !important; }
 html[data-gr-accent] [data-testid="mergebox-border-container"] [class*="MergeBoxSectionHeading"] { font-size: 14px !important; line-height: 20px !important; font-weight: 600 !important; }
 html[data-gr-accent] [data-testid="mergebox-border-container"] > section [class*="contentLayout"] p { font-size: 12px !important; line-height: 18px !important; }
-/* "Merging is blocked" que só repete a mensagem de outra seção: fica só o título */
+/* "Merging is blocked" that only repeats another section's message: keep just the title */
 html[data-gr-accent] [data-testid="mergebox-border-container"] li[data-gr-dup] { display: none !important; }
-/* grupos de checks: linhas iguais, marcador colorido por tipo, chevron à direita */
+/* check groups: uniform rows, color marker by type, chevron on the right */
 html[data-gr-accent] [class*="checksContainer"] { padding: 4px 8px 8px !important; }
 html[data-gr-accent] [class*="checksContainer"] [class*="groupHeader"] { display: flex !important; align-items: center; gap: 4px; min-height: 0 !important; padding: 0 !important; }
 html[data-gr-accent] button[data-gr-cg] {
@@ -1215,19 +1215,19 @@ html[data-gr-accent] button[data-gr-cg="skipped"]  { --gr-cg: var(--fgColor-mute
 html[data-gr-accent] button[data-gr-cg="neutral"]  { --gr-cg: var(--fgColor-muted); }
 html[data-gr-accent] button[data-gr-cg="success"]  { --gr-cg: var(--fgColor-success, #3fb950); }
 html[data-gr-accent] button[data-gr-cg="progress"] [class*="prc-Button-Label"]::before { box-shadow: 0 0 0 3px color-mix(in srgb, var(--gr-accent) 25%, transparent); }
-/* lista expandida de um grupo: alinhada com os rótulos */
+/* expanded list of a group: aligned with the labels */
 html[data-gr-accent] [class*="checksContainer"] [class*="expandableListView"] { padding-left: 8px; }
-/* rodapé: "Convert to draft" / "Close pull request" discretos e em linha */
+/* footer: "Convert to draft" / "Close pull request" subtle and inline */
 html[data-gr-accent] [class*="mergePartialContainer"] > .text-small { padding-block: 2px !important; font-size: 12px; }
 
-/* Largura do painel da direita. A coluna principal tem um limite natural (texto em
-   78ch, imagens no tamanho delas): em telas largas, o espaço que sobra vai para o
-   painel (até 720px), em vez de esticar a coluna da esquerda. */
+/* Right panel width. The main column has a natural limit (text at
+   78ch, images at their own size): on wide screens, the leftover space goes to the
+   panel (up to 720px), instead of stretching the left column. */
 html { --gr-pw: clamp(320px, 34%, 420px); }
 html[data-gr-fullpage] { --gr-pw: min(720px, max(clamp(320px, 34%, 420px), calc(100% - 984px))); }
 
-/* Revisores no Merge status: grupos (aprovações, pendentes) como linhas e a lista
-   de pessoas logo abaixo, alinhada */
+/* Reviewers in Merge status: groups (approvals, pending) as rows and the list
+   of people right below, aligned */
 html[data-gr-accent] [class*="reviewerGroupsContainer"] { padding: 4px 8px 8px !important; }
 html[data-gr-accent] [class*="reviewerGroupsContainer"] button[class*="groupHeadingButton"] {
   width: 100% !important; height: 32px !important; padding: 0 8px !important; border-radius: 6px !important;
@@ -1239,20 +1239,20 @@ html[data-gr-accent] [class*="reviewerGroupsContainer"] button[class*="groupHead
 html[data-gr-accent] [class*="reviewerGroupsContainer"] [class*="expandableListView"] { padding: 0 0 4px 30px; }
 html[data-gr-accent] [class*="reviewerGroupsContainer"] [class*="expandableListView"] li { min-height: 28px; padding-block: 2px !important; }
 
-/* ---------- Fila de merge (/queue/<branch>) ---------- */
-/* largura toda, como as páginas da PR */
+/* ---------- Merge queue (/queue/<branch>) ---------- */
+/* full width, like the PR pages */
 html[data-gr-queue][data-gr-accent] main .container-xl { max-width: none !important; padding-inline: 32px !important; }
 html[data-gr-queue][data-gr-accent] main h2.lh-condensed-ultra { font-size: 24px !important; font-weight: 600 !important; margin: 24px 0 16px !important; align-items: center; }
 html[data-gr-queue][data-gr-accent] main h2 .branch-name {
   font: 500 14px/22px var(--fontStack-monospace, ui-monospace, monospace) !important; padding: 0 8px; border-radius: 6px;
   background: var(--bgColor-accent-muted); color: var(--fgColor-accent) !important;
 }
-/* lista: cabeçalho discreto e entradas como cartões */
+/* list: subtle header and entries as cards */
 html[data-gr-queue][data-gr-accent] main .Box { border-radius: 12px !important; overflow: hidden; }
 html[data-gr-queue][data-gr-accent] main .Box-header { padding: 10px 16px !important; font-size: 13px; color: var(--fgColor-muted); }
 html[data-gr-queue][data-gr-accent] main .Box-header .selected { color: var(--fgColor-default); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 html[data-gr-queue][data-gr-accent] main li.Box-row h4 { font-size: 15px !important; }
-/* status da entrada: ícone + texto ("Waiting", "Checking"…) num selo */
+/* entry status: icon + text ("Waiting", "Checking"…) in a badge */
 html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label] {
   width: auto !important; height: 24px !important; padding: 0 10px 0 8px !important; gap: 6px; border-radius: 999px !important;
   border: 1px solid color-mix(in srgb, currentColor 35%, transparent) !important; background: color-mix(in srgb, currentColor 12%, transparent) !important;
@@ -1260,7 +1260,7 @@ html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-la
 }
 html[data-gr-queue][data-gr-accent] .hx_merge_queue_entry_status_icon[data-gr-label]::after { content: attr(data-gr-label); white-space: nowrap; }
 html[data-gr-queue][data-gr-accent] main li.Box-row .flex-items-start.tmp-mr-3 { min-width: 96px; align-items: center !important; }
-/* estatísticas à direita como cartões */
+/* stats on the right as cards */
 html[data-gr-queue][data-gr-accent] main .col-md-3 > .mb-2 {
   padding: 12px 16px; margin-bottom: 12px !important; border: 1px solid var(--borderColor-muted); border-radius: 12px; background: var(--bgColor-muted);
 }
@@ -1268,6 +1268,6 @@ html[data-gr-queue][data-gr-accent] main .col-md-3 > .mb-2 > .color-fg-subtle { 
 html[data-gr-queue][data-gr-accent] main .col-md-3 .f3 { font-size: 20px !important; }
 html[data-gr-queue][data-gr-accent] main .col-md-3 > hr { display: none; }
 
-/* gaveta nativa (<dialog>): sem o fundo escuro duplo e com rolagem interna */
+/* native drawer (<dialog>): no double dark backdrop and with internal scrolling */
 html[data-gr-accent] dialog[data-gr-drawer]::backdrop { background: transparent; }
 html[data-gr-accent] dialog[data-gr-drawer] .Overlay-body { flex: 1; overflow: auto; }

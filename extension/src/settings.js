@@ -1,20 +1,20 @@
-// Configurações compartilhadas entre content script e popup.
-// Cada chave booleana vira um atributo `data-gr-<chave>` no <html> do GitHub,
-// e todo o CSS da extensão é escopado por esses atributos. Desligar uma opção
-// remove o atributo e o GitHub volta ao normal, sem recarregar a página.
+// Settings shared by the content script and the popup.
+// Each boolean key becomes a `data-gr-<key>` attribute on GitHub's <html>, and
+// all of the extension's CSS is scoped by those attributes. Turning an option
+// off removes the attribute and GitHub goes back to normal, without a reload.
 const GR_DEFAULTS = {
-  enabled: true,   // chave geral
-  theme: true,     // paleta, tipografia e raios via tokens do Primer
-  cards: true,     // listas de PR/issue como cartões com faixa de estado
-  groupBots: true, // PRs de bots (dependabot, renovate, build(deps)) no fim da lista e recolhidos
-  dimDrafts: true, // rascunhos esmaecidos
-  readable: true,  // descrições/comentários em markdown mais legíveis
-  toc: true,       // página do PR: índice flutuante da descrição
-  compactSidebar: true, // página do PR: seções vazias da barra lateral em uma linha
-  prNumber: true,  // página do PR: #número visível ao lado do título (clique copia)
-  cockpit: true,   // página do PR: Overview vira "o que falta para o merge" (lido da própria página)
-  oldModeHint: true,   // página do PR: destaca o seletor "Preview" para voltar à interface antiga
-  debug: false,    // contorna os elementos que a extensão reconheceu
+  enabled: true,   // master switch
+  theme: true,     // palette, typography and radii through Primer tokens
+  cards: true,     // PR/issue lists as cards with a state stripe
+  groupBots: true, // bot PRs (dependabot, renovate, build(deps)) collapsed at the end of the list
+  dimDrafts: true, // dimmed drafts
+  readable: true,  // more readable markdown descriptions/comments
+  toc: true,       // PR page: floating table of contents for the description
+  compactSidebar: true, // PR page: empty sidebar sections on a single line
+  prNumber: true,  // PR page: #number next to the title (click to copy)
+  cockpit: true,   // PR page: Overview becomes "what's left to merge" (read from the page itself)
+  oldModeHint: true,   // PR page: highlights the "Preview" switch to go back to the classic UI
+  debug: false,    // outlines the elements the extension recognized
   accent: "violet" // violet | blue | green | orange
 };
 

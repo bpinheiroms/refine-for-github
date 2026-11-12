@@ -1,34 +1,34 @@
-/* GitHub Refine — Overview do PR como "o que falta para o merge"
+/* GitHub Refine — PR Overview as "what is left before merge"
  *
- * Duas peças nossas, montadas só com o que já está na página (sem API, sem token):
+ * Two pieces of ours, built only from what is already on the page (no API, no token):
  *
- *   #gr-cockpit  (coluna principal, antes da caixa de merge)
- *     veredito + lista de pendências com a ação de cada uma: checks (com a
- *     lista dos que falharam), conversas sem resolver, aprovação, conflitos;
- *     no rodapé, os botões de merge da própria página (acionam os originais).
+ *   #gr-cockpit  (main column, before the merge box)
+ *     verdict + list of pending items with the action for each: checks (with the
+ *     list of failed ones), unresolved conversations, approval, conflicts;
+ *     in the footer, the page's own merge buttons (they trigger the originals).
  *
- *   #gr-panel    (coluna da direita, no lugar da barra lateral)
- *     conversas no código e comentários. Clicar abre um modal (#gr-modal) com
- *     uma cópia da conversa inteira (trecho do diff + respostas) e um botão
- *     para ir até o original, onde dá para responder.
+ *   #gr-panel    (right column, in place of the sidebar)
+ *     code conversations and comments. Clicking opens a modal (#gr-modal) with
+ *     a copy of the whole conversation (diff snippet + replies) and a button
+ *     to go to the original, where you can reply.
  *
- * De onde vem cada dado:
- *   - conversas: `.js-resolvable-timeline-thread-container[data-resolved]`;
- *   - comentários: `.comment-body` fora da descrição e das conversas;
- *   - checks: linhas da caixa de merge com "Failing after…", "Successful in…";
- *   - aprovação: aria-label dos revisores ("X approved these changes");
- *   - conflitos e merge: textos e botões da caixa de merge.
- * O que não for encontrado simplesmente não aparece (nada de chute).
+ * Where each piece of data comes from:
+ *   - conversations: `.js-resolvable-timeline-thread-container[data-resolved]`;
+ *   - comments: `.comment-body` outside the description and conversations;
+ *   - checks: merge box rows with "Failing after…", "Successful in…";
+ *   - approval: reviewers' aria-label ("X approved these changes");
+ *   - conflicts and merge: merge box texts and buttons.
+ * Anything not found simply does not show up (no guessing).
  *
- * A página original não perde nada: o CSS só esconde a caixa de merge e a
- * barra lateral (atributos data-gr-*), e "Mostrar Overview original" desfaz.
+ * The original page loses nothing: the CSS only hides the merge box and the
+ * sidebar (data-gr-* attributes), and "Show original Overview" undoes it.
  */
 const GRCockpit = (() => {
   const root = document.documentElement;
   let el = null, panel = null;
   let renderedSig = null, panelSig = null;
-  let refs = { threads: [], comments: [] }; // elementos originais, para o modal
-  let expandedChecks = null;                // caminho em que já abrimos a lista de checks
+  let refs = { threads: [], comments: [] }; // original elements, for the modal
+  let expandedChecks = null;                // path where we already opened the checks list
 
   const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
   const text = (node) => clean(node?.textContent);
@@ -45,10 +45,10 @@ const GRCockpit = (() => {
     return h < 48 ? `${h}h` : `${Math.round(h / 24)}d`;
   }
 
-  // ---------- leitura da página ----------
+  // ---------- page reading ----------
 
-  // Título de um comentário: o primeiro **negrito** do primeiro bloco com texto,
-  // senão o próprio bloco. Pula assinaturas em <sub> ("Automated review by…").
+  // Comment title: the first **bold** of the first block with text,
+  // otherwise the block itself. Skips signatures in <sub> ("Automated review by…").
   function commentTitle(body) {
     if (!body) return "";
     for (const block of body.querySelectorAll(":scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > ul > li, :scope > ol > li")) {
@@ -62,13 +62,13 @@ const GRCockpit = (() => {
     return cut(text(body), 140);
   }
 
-  // Autor da última mensagem da conversa (para destacar quando outra pessoa respondeu).
+  // Author of the last message in the conversation (to highlight when someone else replied).
   const lastAuthor = (t, q, viewer) => { const all = [...t.querySelectorAll(q)].map(text).filter(Boolean); return all.length > 1 ? who(all[all.length - 1], viewer) : ""; };
   const who = (login, viewer) => (!login ? "?" : login === viewer ? "you" : displayName(login));
 
-  // Conversas resolvidas chegam recolhidas: o GitHub só baixa o conteúdo ao
-  // expandir (data-deferred-content-url, mesma origem, sessão do usuário).
-  // Baixamos o mesmo trecho uma vez e o colocamos onde o GitHub colocaria.
+  // Resolved conversations arrive collapsed: GitHub only fetches the content on
+  // expand (data-deferred-content-url, same origin, user session).
+  // We fetch the same fragment once and place it where GitHub would.
   const hydrated = new Set();
   function hydrateCollapsed() {
     for (const t of document.querySelectorAll(".js-resolvable-timeline-thread-container[data-deferred-content-url]")) {
@@ -89,8 +89,8 @@ const GRCockpit = (() => {
     }
   }
 
-  // Overview nova (React): cada conversa é um <article> sem id dentro da review,
-  // com o caminho do arquivo num link mono no título e "Line N" ao lado.
+  // New Overview (React): each conversation is an <article> with no id inside the review,
+  // with the file path in a mono link in the title and "Line N" next to it.
   const NEW_THREAD = "main article:not([id]):has(> div h2 a.text-mono)";
   const isNewThread = (t) => t.matches("article:not([id])");
   const threadResolved = (t) => isNewThread(t)
@@ -108,7 +108,7 @@ const GRCockpit = (() => {
       i,
       resolved: threadResolved(t),
       loc: `${path}${line ? ":" + line : ""}`,
-      // Resolvidas chegam recolhidas (o texto só aparece ao expandir).
+      // Resolved ones arrive collapsed (the text only appears on expand).
       title: commentTitle(bodies[0]) || (resolver ? `Resolved by ${who(resolver, viewer)}` : "Open to read"),
       who: login ? who(login, viewer) : "",
       avatar: t.querySelector("img[alt^='@']")?.getAttribute("src") || null,
@@ -120,8 +120,8 @@ const GRCockpit = (() => {
   }
 
   function readThreads(viewer) {
-    // A mesma conversa pode aparecer duas vezes (timeline + painel "Comments" do
-    // GitHub aberto): deduplicamos pelo link da conversa (#r123…).
+    // The same conversation can appear twice (timeline + GitHub "Comments" panel
+    // open): we deduplicate by the conversation link (#r123…).
     const keyOf = (t) => t.querySelector(":scope > div h2 a[href*='#r'], a[href*='#r']")?.getAttribute("href")?.split("#")[1] || t;
     const seenT = new Set();
     const fresh = [...document.querySelectorAll(NEW_THREAD)].filter((t) => { const k = keyOf(t); if (seenT.has(k)) return false; seenT.add(k); return true; });
@@ -151,15 +151,15 @@ const GRCockpit = (() => {
     return { open: list.filter((t) => !t.resolved), resolved: list.filter((t) => t.resolved) };
   }
 
-  // Comentários gerais: corpos de comentário fora da descrição e das conversas.
+  // General comments: comment bodies outside the description and conversations.
   function readComments(viewer) {
     const seen = new Set();
     const out = [];
-    // Clássica: .comment-body. Overview nova (React): article#issuecomment-… com .markdown-body.
+    // Classic: .comment-body. New Overview (React): article#issuecomment-… with .markdown-body.
     for (const body of document.querySelectorAll("main .comment-body, main .js-comment-body, main article:is([id^='issuecomment-'], [id^='pullrequestreview-']) .markdown-body")) {
       if (body.closest("[data-gr-desc], .js-resolvable-timeline-thread-container, #gr-cockpit, #gr-panel")) continue;
       const box = body.closest("article:is([id^='issuecomment-'], [id^='pullrequestreview-']), [id^='issuecomment-'], .timeline-comment-group, .TimelineItem") || body.parentElement;
-      if (box.matches("article") && body.closest("article") !== box) continue; // conversa dentro da review
+      if (box.matches("article") && body.closest("article") !== box) continue; // conversation inside the review
       const key = box.id || box;
       if (seen.has(box) || seen.has(key)) continue;
       seen.add(box); seen.add(key);
@@ -176,7 +176,7 @@ const GRCockpit = (() => {
     }));
   }
 
-  // Linhas da lista de checks na caixa de merge ("CI / check (pull_request)  Failing after 3s  Required").
+  // Rows of the checks list in the merge box ("CI / check (pull_request)  Failing after 3s  Required").
   const CHECK_STATUS = /^(failing|failed|successful|cancelled|canceled|skipped|queued|in progress|pending|expected|waiting|neutral|action required|timed out|started)\b/i;
   function readCheckRows(mergebox, textNodes) {
     if (!mergebox) return [];
@@ -201,7 +201,7 @@ const GRCockpit = (() => {
     return [...rows.values()];
   }
 
-  // Botões de merge da caixa original ("Resolve conflicts", "Enable auto-merge (squash)"…).
+  // Merge buttons from the original box ("Resolve conflicts", "Enable auto-merge (squash)"…).
   const MERGE_ACTION = /merge|conflict|update branch|rebase|ready for review|approve|reopen/i;
   function readMergeActions(mergebox) {
     if (!mergebox) return [];
@@ -211,7 +211,7 @@ const GRCockpit = (() => {
       .filter((t) => t.length > 2 && t.length < 40 && MERGE_ACTION.test(t) && !/^merge conflicts$/i.test(t) && !seen.has(t) && seen.add(t));
   }
 
-  // Texto de uma célula da caixa de merge nova ("Checks 1 required failing, 1 failing").
+  // Text of a cell in the new merge box ("Checks 1 required failing, 1 failing").
   function cell(scope, label, textNodes) {
     const node = textNodes(scope, new RegExp(`^${label}$`, "i"))[0];
     let e = node?.parentElement;
@@ -237,7 +237,7 @@ const GRCockpit = (() => {
         act: [{ label: "Ready for review", click: "^ready for review$" }] });
     }
 
-    // Checks. A lista detalhada só existe depois de aberta: abrimos uma vez.
+    // Checks. The detailed list only exists once opened: we open it once.
     const checksCell = mergebox && cell(mergebox, "Checks", textNodes);
     let rows = readCheckRows(mergebox, textNodes);
     if (!rows.length && checksCell && expandedChecks !== location.pathname) {
@@ -247,7 +247,7 @@ const GRCockpit = (() => {
     const checks = checksCell?.text || "";
     const failingN = [...checks.matchAll(/(\d+)\s+(?:required\s+)?failing/gi)].reduce((a, m) => a + +m[1], 0);
     const failedRows = rows.filter((r) => r.st === "bad");
-    // Lê de um nó de texto só: no texto juntado da célula o contador vizinho gruda no número ("4" + "4 workflows" = "44").
+    // Read from a single text node: in the cell's joined text the neighboring counter sticks to the number ("4" + "4 workflows" = "44").
     const RUNS = /^\s*(\d+)\s+workflows?\s+(?:approvals?\s+pending|awaiting approval|runs? awaiting)/i;
     const runsNode = mergebox && textNodes(mergebox, RUNS)[0];
     const runs = runsNode ? runsNode.nodeValue.match(RUNS) : `${checks} ${scopeText}`.match(/\b(\d+)\s+workflows?\s+(?:approvals?\s+pending|awaiting approval|runs? awaiting)/i);
@@ -267,10 +267,10 @@ const GRCockpit = (() => {
       items.push({ st: "ok", title: rows.length ? `${plural(rows.length, "Check passed", `All ${rows.length} checks passed`)}` : "Checks passed" });
     }
 
-    // Conversas: ficam só no painel (aba Unresolved), não repetimos no cockpit.
+    // Conversations: only in the panel (Unresolved tab), not repeated in the cockpit.
     const threads = readThreads(viewer);
 
-    // Aprovação
+    // Approval
     const reviewers = sidebarSection("reviewers");
     const labels = [...(reviewers?.querySelectorAll("[aria-label]") || [])].map((e) => e.getAttribute("aria-label"));
     const pick = (re) => [...new Set(labels.map((l) => l.match(re)?.[1]).filter(Boolean).map((l) => who(l, viewer)))];
@@ -293,7 +293,7 @@ const GRCockpit = (() => {
       items.push({ st: "todo", title: "No approvals yet", sub, act: reviewAct });
     }
 
-    // Conflitos
+    // Conflicts
     if (/merge conflicts|has conflicts|conflicts must be resolved|resolve conflicts/i.test(scopeText)) {
       items.push({ st: "bad", title: `Conflicts with ${base}`, sub: "Resolve them before merging.", act: [{ label: "Resolve conflicts", primary: true, click: "^resolve conflicts$", href: `${prUrl}/conflicts` }] });
     } else if (/no conflicts with the base branch/i.test(scopeText)) {
@@ -313,7 +313,7 @@ const GRCockpit = (() => {
     };
   }
 
-  // ---------- desenho ----------
+  // ---------- rendering ----------
 
   function h(tag, attrs = {}, ...kids) {
     const n = document.createElement(tag);
@@ -327,7 +327,7 @@ const GRCockpit = (() => {
     return n;
   }
 
-  // Aciona um botão da página original (escondida) pelo texto.
+  // Triggers a button on the original (hidden) page by its text.
   function clickOriginal(pattern) {
     const re = pattern instanceof RegExp ? pattern : new RegExp(pattern, "i");
     const btn = [...document.querySelectorAll("main button, main a, main summary, main [role='button'], main [role='menuitem']")]
@@ -342,7 +342,7 @@ const GRCockpit = (() => {
     return h("a", { class: cls, href: a.href }, a.label);
   }
 
-  // Botão que liga/desliga um atributo no <html> e troca o próprio texto.
+  // Button that toggles an attribute on <html> and swaps its own text.
   function toggle(attr, offLabel, onLabel, cls) {
     return h("button", { type: "button", class: cls, onclick: (e) => {
       const on = !root.hasAttribute(attr);
@@ -373,18 +373,18 @@ const GRCockpit = (() => {
     const verdict = merged ? "Merged" : closed ? "Closed without merging" : n ? `${n} ${plural(n, "thing", "things")} left before merging`
       : m.threads.open.length ? `Ready to merge · ${m.threads.open.length} open ${plural(m.threads.open.length, "conversation", "conversations")}` : "Ready to merge ✓";
 
-    // U1 (hierarquia por contraste): um só botão de destaque, o do primeiro item que falta.
-    // O mais grave primeiro (falhou > atenção > pendente): é ele que ganha o destaque.
+    // U1 (hierarchy through contrast): a single primary button, for the first missing item.
+    // Most severe first (failed > attention > pending): that one gets the emphasis.
     const rank = { bad: 0, warn: 1, todo: 2 };
     const todo = m.items.filter((i) => i.st !== "ok").sort((a, b) => rank[a.st] - rank[b.st]), done = m.items.filter((i) => i.st === "ok");
     const firstAct = todo.find((i) => i.act?.length)?.act[0];
     const acts = (it) => (it.act || []).map((a) => actionButton({ ...a, primary: a === firstAct }));
-    // A barra de merge não repete o que já está num item (ex.: "Resolve conflicts").
+    // The merge bar does not repeat what is already in an item (e.g. "Resolve conflicts").
     const itemLabels = todo.flatMap((i) => (i.act || []).map((a) => a.label.toLowerCase()));
     const dup = (t) => itemLabels.some((l) => l === t.toLowerCase() || (/approve/.test(l) && /approve/i.test(t)));
     const mergeActs = m.mergeActions.filter((t) => !dup(t));
 
-    // U2 (carga cognitiva): o que já está feito vira uma linha discreta no fim.
+    // U2 (cognitive load): what is already done becomes a subtle line at the end.
     const list = open && m.items.length ? h("div", { class: "gr-todo" },
       todo.map((it) => h("div", { class: "gr-item", "data-st": it.st },
         h("span", { class: "gr-ic" }, ICON[it.st]),
@@ -397,7 +397,7 @@ const GRCockpit = (() => {
         mergeActs.map((t, i) => h("button", { type: "button", class: `gr-btn${i === mergeActs.length - 1 && !n ? " gr-pri" : ""}`,
           onclick: () => clickOriginal(`^${t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }, t))) : null) : null;
 
-    // Ações raras (draft, fechar, arquivar) ficam num menu; só o atalho para a Overview original fica à vista.
+    // Rare actions (draft, close, archive) go in a menu; only the shortcut to the original Overview stays visible.
     const more = open ? h("details", { class: "gr-more" }, h("summary", {}, "More actions"),
       h("div", { class: "gr-menu" },
         h("button", { type: "button", onclick: () => clickOriginal(/^convert to draft$/i) }, "Convert to draft"),
@@ -406,14 +406,14 @@ const GRCockpit = (() => {
     const foot = h("div", { class: "gr-foot" }, more,
       toggle("data-gr-cockpit-off", "Show original Overview", "Hide original Overview", "gr-orig"));
 
-    if (!open) { el.replaceChildren(); return; } // mergeada/fechada: nada a fazer, o cartão do GitHub já diz
+    if (!open) { el.replaceChildren(); return; } // merged/closed: nothing to do, the GitHub card already says so
     el.replaceChildren(h("div", { class: "gr-verdict" }, h("h2", {}, verdict)), ...[list, foot].filter(Boolean));
   }
 
-  // ---------- painel da direita + modal ----------
+  // ---------- right panel + modal ----------
 
   function card(kind, c) {
-    // Resposta de outra pessoa = algo para você ler: destaque. Resposta sua: só o número.
+    // Reply from someone else = something for you to read: highlight. Your own reply: just the count.
     const theirs = c.replies && c.lastWho && c.lastWho !== "you" && c.lastWho !== c.who;
     const reply = c.replies ? h("span", { class: `gr-rep${theirs ? " gr-rep-new" : ""}` },
       theirs ? `↩ ${c.lastWho} replied` : `${c.replies} ${plural(c.replies, "reply", "replies")}`) : null;
@@ -425,12 +425,12 @@ const GRCockpit = (() => {
         reply));
   }
 
-  // Abas do painel: Unresolved · Resolved · Comments · Details (uma por vez).
-  // Details mostra a barra lateral original do GitHub (revisores, labels…),
-  // movida para dentro do painel enquanto a aba está aberta, então editar
-  // continua funcionando. Se ela não puder ser movida (Overview nova, React),
-  // a barra lateral original aparece logo abaixo das abas (data-gr-show-sidebar),
-  // então dá para voltar pelas abas.
+  // Panel tabs: Unresolved · Resolved · Comments · Details (one at a time).
+  // Details shows GitHub's original sidebar (reviewers, labels…),
+  // moved into the panel while the tab is open, so editing
+  // keeps working. If it cannot be moved (new Overview, React),
+  // the original sidebar appears right below the tabs (data-gr-show-sidebar),
+  // so you can go back via the tabs.
   let panelTab = "open";
   let lastModel = null;
   let details = null; // { node, mark }
@@ -465,8 +465,8 @@ const GRCockpit = (() => {
   function renderPanel(m) {
     lastModel = m;
     const { open, resolved } = m.threads;
-    // Sempre abre em Unresolved e nunca troca de aba sozinho: as conversas chegam
-    // aos poucos (React), e escolher a aba pelos dados fazia o painel pular de aba.
+    // Always opens on Unresolved and never switches tabs on its own: conversations arrive
+    // gradually (React), and picking the tab from the data made the panel jump tabs.
     const stacked = root.hasAttribute("data-gr-stacked");
     const tabs = [["open", "Open", open.length], ["resolved", "Resolved", resolved.length], ["comments", "Comments", m.comments.length], ["details", "Details", null]];
     const bar = h("div", { class: "gr-tabs", role: "tablist", "aria-label": "Conversations and details" },
@@ -476,7 +476,7 @@ const GRCockpit = (() => {
     if (panelTab === "details") {
       const host = h("div", { class: "gr-details", role: "tabpanel" });
       panel.replaceChildren(bar, host);
-      // Empilhado: a barra lateral do GitHub aparece logo abaixo das abas (CSS esconde o que fica no meio).
+      // Stacked: the GitHub sidebar appears right below the tabs (CSS hides what is in between).
       if (stacked) unmountDetails();
       if (stacked || !mountDetails(host)) root.setAttribute("data-gr-show-sidebar", "");
       else root.removeAttribute("data-gr-show-sidebar");
@@ -485,7 +485,7 @@ const GRCockpit = (() => {
     unmountDetails();
     const list = panelTab === "comments" ? m.comments.map((c) => card("comments", c))
       : (panelTab === "open" ? open : resolved).map((c) => card("threads", c));
-    // Estado vazio: ícone, título e uma frase; atalhos discretos só quando há para onde ir.
+    // Empty state: icon, title and one sentence; subtle shortcuts only when there is somewhere to go.
     const E = {
       open: ["✓", "Nothing open", resolved.length ? `All ${resolved.length} code ${plural(resolved.length, "conversation is", "conversations are")} resolved.` : "No one has commented on the code yet."],
       resolved: ["○", "Nothing resolved", "Resolved code conversations will show up here."],
@@ -501,10 +501,10 @@ const GRCockpit = (() => {
       list.length ? list : emptyBox));
   }
 
-  // O modal mostra a conversa original do GitHub (movida para dentro enquanto
-  // está aberto, com um marcador no lugar dela), então Reply, Resolve, reações
-  // e sugestões continuam funcionando ali. Só movemos o que o servidor
-  // renderizou (Rails: turbo-frame / elementos js-*); o resto vira cópia.
+  // The modal shows GitHub's original conversation (moved inside while
+  // open, with a marker in its place), so Reply, Resolve, reactions
+  // and suggestions keep working there. We only move what the server
+  // rendered (Rails: turbo-frame / js-* elements); the rest becomes a copy.
   let moved = null; // { orig, mark }
 
   function closeModal() {
@@ -520,12 +520,12 @@ const GRCockpit = (() => {
     if (e.key === "Escape" && !e.target.closest?.("textarea")) { e.stopPropagation(); closeModal(); }
   }
 
-  // Nunca move o que o React desenhou (Overview nova): ele perde a referência e quebra.
+  // Never move what React rendered (new Overview): it loses the reference and breaks.
   const movable = (n) => !n.closest("[data-testid='timeline-item']") &&
     (n.matches(".js-resolvable-timeline-thread-container, .js-timeline-item, .timeline-comment-group") || !!n.closest("turbo-frame"));
 
-  // Controles de resposta/resolver da própria conversa: no modal quem faz isso é o
-  // nosso campo, então tiramos os do GitHub (senão ficam dois campos e dois "Resolve").
+  // The conversation's own reply/resolve controls: in the modal our field handles
+  // that, so we remove GitHub's (otherwise there are two fields and two "Resolve").
   const REPLY_CTRL = /^(write a reply|reply…|reply\.\.\.|add a reply|resolve|resolve conversation|unresolve|unresolve conversation)$/i;
   function stripReplyControls(scope) {
     const hits = new Set();
@@ -535,7 +535,7 @@ const GRCockpit = (() => {
     for (let e of hits) {
       let parent = e.parentElement;
       e.remove();
-      // Sobe removendo os contêineres que ficaram vazios (a linha "Write a reply | Resolve").
+      // Walk up removing containers left empty (the "Write a reply | Resolve" row).
       while (parent && parent !== scope && !parent.textContent.trim() && !parent.querySelector("img")) { const up = parent.parentElement; parent.remove(); parent = up; }
     }
   }
@@ -555,14 +555,14 @@ const GRCockpit = (() => {
     return !!b;
   };
 
-  // Escreve num <textarea> do GitHub de um jeito que o React também perceba.
+  // Writes into a GitHub <textarea> in a way React also notices.
   function fill(field, value) {
     Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set.call(field, value);
     field.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  // Envia pela caixa de resposta original: a da conversa, ou a de comentário
-  // novo da página (citando o comentário) quando é um comentário geral.
+  // Sends via the original reply box: the conversation's, or the page's new-comment
+  // box (quoting the comment) when it is a general comment.
   function submitReply(kind, orig, body) {
     let field;
     if (kind === "threads") {
@@ -580,11 +580,11 @@ const GRCockpit = (() => {
     return true;
   }
 
-  // Caixa de comentário novo da página (escondida): usada pelo painel e pelas respostas.
+  // The page's (hidden) new-comment box: used by the panel and by replies.
   const pageComposer = () => document.querySelector("#new_comment_field, form.js-new-comment-form textarea, main textarea[name='comment[body]'], main textarea[placeholder*='comment' i]");
 
-  // Novo comentário no topo da aba Comments. Criado uma vez só, para o rascunho
-  // sobreviver quando o painel é redesenhado.
+  // New comment at the top of the Comments tab. Created only once, so the draft
+  // survives when the panel is re-rendered.
   let newBox = null;
   function newComment() {
     if (newBox) return newBox;
@@ -610,7 +610,7 @@ const GRCockpit = (() => {
     const field = h("textarea", { class: "gr-reply", rows: "3", placeholder: kind === "threads" ? "Reply to this conversation…" : "Reply (the comment will be quoted)…" });
     const status = h("span", { class: "gr-rstatus" });
     const canResolve = kind === "threads" && !threadResolved(orig);
-    // Sem texto o botão só resolve; com texto, responde e resolve.
+    // With no text the button only resolves; with text, it replies and resolves.
     const resolveBtn = canResolve ? h("button", { type: "button", class: "gr-btn", onclick: () => send(true) }, "Resolve") : null;
     const syncLabel = () => { if (resolveBtn) resolveBtn.textContent = field.value.trim() ? "Reply and resolve" : "Resolve"; };
     const send = (resolve) => {
@@ -651,7 +651,7 @@ const GRCockpit = (() => {
       content = readOnlyCopy(orig);
     }
 
-    // Clicar num link dentro da conversa (ex.: "ir para o código") leva a outra página: fecha o modal.
+    // Clicking a link inside the conversation (e.g. "go to code") leads to another page: close the modal.
     const modal = h("div", { id: "gr-modal", onclick: (e) => {
       if (e.target.id === "gr-modal") return closeModal();
       const a = e.target.closest("a[href]");
@@ -664,7 +664,7 @@ const GRCockpit = (() => {
         h("div", { class: "gr-mbody" }, content),
         composer(kind, orig)));
     document.body.appendChild(modal);
-    // Conversa recolhida da Overview nova: pede ao GitHub para expandir e atualiza a cópia.
+    // Collapsed conversation in the new Overview: ask GitHub to expand it and refresh the copy.
     if (kind === "threads" && isNewThread(orig) && !orig.querySelector(".markdown-body")) {
       orig.querySelector("[data-dd-action-name='pull_requests.thread.expand'], [aria-label^='Open review comment']")?.click();
       let tries = 0;
@@ -678,40 +678,40 @@ const GRCockpit = (() => {
     modal.querySelector(".gr-reply").focus();
   }
 
-  // ---------- montagem ----------
+  // ---------- mounting ----------
 
-  // Cockpit antes da caixa de merge (ou da descrição); painel dentro do contêiner
-  // das colunas, no lugar da barra lateral. Recolocados se o React redesenhar.
+  // Cockpit before the merge box (or the description); panel inside the columns
+  // container, in place of the sidebar. Re-placed if React re-renders.
   let placedOnce = false;
   function place() {
     const anchor = document.querySelector("[data-gr-mergebox]") || document.querySelector("[data-gr-desc]");
     if (!anchor?.parentElement) return false;
     if (!el.isConnected || el.nextElementSibling !== anchor) anchor.parentElement.insertBefore(el, anchor);
     const cols = document.querySelector("[data-gr-cols]");
-    // Tela estreita (o Primer empilha as colunas): o painel vem logo abaixo do
-    // cockpit, em vez de ir parar no fim da página ou fora da tela.
-    // Sem a coluna lateral identificada (ex.: barra lateral do GitHub não renderizada), o painel fica abaixo do cockpit.
-    // Página ainda carregando (colunas do GitHub não montadas) em tela larga: o
-    // painel espera, em vez de aparecer na coluna da esquerda e depois pular.
-    // Só mostra o painel quando a coluna principal já tem conteúdo (descrição
-    // carregada e o cockpit dentro das mesmas colunas); senão ele aparece sozinho
-    // à esquerda e salta para a direita quando o resto chega.
-    // Pronto = a coluna principal já tem conteúdo de verdade (altura), não só o esqueleto.
+    // Narrow screen (Primer stacks the columns): the panel comes right below the
+    // cockpit, instead of ending up at the bottom of the page or off-screen.
+    // Without an identified side column (e.g. GitHub sidebar not rendered), the panel stays below the cockpit.
+    // Page still loading (GitHub columns not mounted) on a wide screen: the
+    // panel waits, instead of showing in the left column and then jumping.
+    // Only show the panel once the main column has content (description
+    // loaded and the cockpit inside the same columns); otherwise it appears alone
+    // on the left and jumps to the right when the rest arrives.
+    // Ready = the main column already has real content (height), not just the skeleton.
     const main = cols && [...cols.children].find((c) => c !== panel && /ContentWrapper/.test(c.className));
     const ready = !!(main && main.getBoundingClientRect().height > 240 && document.querySelector("[data-gr-desc], section:has(#overview-comments)"));
-    // Só na primeira colocação: depois disso, redimensionar (ou a aba Details no
-    // celular, que deixa a coluna com display:contents e altura 0) não pode
-    // esconder o painel.
+    // Only on first placement: after that, resizing (or the Details tab on
+    // mobile, which leaves the column with display:contents and height 0) must not
+    // hide the panel.
     if (ready) placedOnce = true;
     if (!ready && !placedOnce && innerWidth >= 900) { panel.remove(); setTimeout(() => el?.isConnected && place(), 300); return true; }
-    // Não olhar o flex-direction das colunas: com data-gr-stacked o nosso CSS força
-    // "column", e o painel nunca voltaria para o lado ao alargar a janela.
+    // Do not check the columns' flex-direction: with data-gr-stacked our CSS forces
+    // "column", and the panel would never go back to the side when widening the window.
     const narrow = !cols || innerWidth < 900;
-    // Empilhado (celular/tela estreita): o painel vem depois da descrição, e a
-    // barra lateral original do GitHub aparece no fim da página (sem aba Details).
+    // Stacked (mobile/narrow screen): the panel comes after the description, and
+    // GitHub's original sidebar appears at the end of the page (no Details tab).
     if (narrow) {
-      // Ordem: cockpit → descrição → conversas (painel) → commits → Details (o CSS
-      // manda os commits para depois do painel, sem mover o nó do React).
+      // Order: cockpit → description → conversations (panel) → commits → Details (the CSS
+      // sends commits after the panel, without moving the React node).
       const desc = document.querySelector("[data-gr-desc]");
       const after = desc && desc.parentElement === el.parentElement ? desc : el;
       if (after.nextElementSibling !== panel) after.after(panel);
@@ -722,7 +722,7 @@ const GRCockpit = (() => {
     if (was !== narrow && lastModel) renderPanel(lastModel);
     return true;
   }
-  // Menu "More actions" (<details>): fecha ao clicar fora, ao escolher uma opção ou com Esc.
+  // "More actions" menu (<details>): closes on outside click, on choosing an option, or with Esc.
   document.addEventListener("click", (e) => {
     for (const d of document.querySelectorAll("#gr-cockpit .gr-more[open]")) {
       if (!d.contains(e.target) || e.target.closest(".gr-menu button")) d.open = false;
@@ -731,10 +731,10 @@ const GRCockpit = (() => {
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") document.querySelectorAll("#gr-cockpit .gr-more[open]").forEach((d) => (d.open = false));
   });
-  // Painel lateral do GitHub aberto como janela (CSS): clicar fora ou Esc fecha,
-  // usando o próprio botão de fechar do GitHub.
+  // GitHub side panel opened as a drawer (CSS): clicking outside or Esc closes it,
+  // using GitHub's own close button.
   const SIDE = '[class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])';
-  // O botão de fechar do GitHub costuma ter o nome num tooltip (aria-labelledby), não em aria-label.
+  // GitHub's close button usually has its name in a tooltip (aria-labelledby), not in aria-label.
   const labelOf = (b) => [b.getAttribute("aria-label"), ...(b.getAttribute("aria-labelledby") || "").split(" ").map((id) => id && document.getElementById(id)?.textContent),
     b.nextElementSibling?.matches?.("[role='tooltip'], [popover]") ? b.nextElementSibling.textContent : ""].filter(Boolean).join(" ");
   const closeSide = (panel) => {
@@ -746,16 +746,16 @@ const GRCockpit = (() => {
   document.addEventListener("mousedown", (e) => {
     const panel = document.querySelector(SIDE);
     if (!panel || panel.contains(e.target) || e.target.closest?.("[role='dialog'], [role='menu'], [role='listbox'], [popover], #__primerPortalRoot__, #gr-modal")) return;
-    // Os botões que abrem o painel (barra fixa) não devem fechá-lo antes de abrir de novo.
-    // Só os botões da barra fixa que abrem/fecham painéis ficam de fora; qualquer
-    // outra área da página (inclusive o cabeçalho da PR) fecha a gaveta.
+    // The buttons that open the panel (fixed bar) must not close it before reopening.
+    // Only the fixed-bar buttons that open/close panels are excluded; any
+    // other area of the page (including the PR header) closes the drawer.
     if (e.target.closest?.("[data-docked-panel-toggle], [class*='StickyHeader'] button, [class*='miniHeader'] button")) return;
     closeSide(panel);
   }, true);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.getElementById("gr-modal")) closeSide(document.querySelector(SIDE)); });
-  // Menus do GitHub abertos a partir da gaveta (ordenar, filtros): o GitHub calcula a
-  // posição como se o painel estivesse no lugar original e o menu vai para o canto
-  // da tela. Reposicionamos o menu logo abaixo do botão que o abriu.
+  // GitHub menus opened from the drawer (sort, filters): GitHub computes the
+  // position as if the panel were in its original place and the menu goes to the corner
+  // of the screen. We reposition the menu right below the button that opened it.
   document.addEventListener("click", (e) => {
     const btn = e.target.closest?.("button");
     if (!btn || !btn.closest(SIDE)) return;
@@ -800,12 +800,12 @@ const GRCockpit = (() => {
     if (!el) el = h("section", { id: "gr-cockpit", "aria-label": "Pull request summary" });
     if (!panel) panel = h("aside", { id: "gr-panel", "aria-label": "Conversations and comments" });
     if (!place()) return;
-    // Overview original visível: a barra lateral precisa estar no lugar dela.
+    // Original Overview visible: the sidebar must be in its place.
     if (root.hasAttribute("data-gr-cockpit-off") && details) { unmountDetails(); panelTab = "open"; panelSig = null; }
 
     hydrateCollapsed();
     const m = readPage(textNodes);
-    // Sem nada reconhecido numa PR aberta, não mexemos na página.
+    // With nothing recognized on an open PR, we leave the page alone.
     const usable = m.items.length > 0 || !/^(open|aberto|draft|rascunho)$/.test(m.prState);
     root.toggleAttribute("data-gr-cockpit-ready", usable);
     if (!usable) { el.replaceChildren(); panel.replaceChildren(); renderedSig = panelSig = null; return; }
