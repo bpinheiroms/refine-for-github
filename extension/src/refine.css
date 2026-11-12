@@ -120,7 +120,7 @@ html[data-gr-cards] [data-gr-row]:hover {
 /* A row that holds an open dialog (merge queue: "Queue entry status details" lives
    inside its row): no lift, no clipping. Otherwise hovering the dialog toggles the
    row's transform, which moves/clips the dialog positioned inside it. */
-html[data-gr-cards] [data-gr-row]:has(dialog[open], [data-gr-drawer]) {
+html[data-gr-cards] [data-gr-row]:has(dialog[open], :not(dialog)[data-gr-drawer]) {
   transform: none !important; overflow: visible !important; transition: none !important; box-shadow: none !important;
 }
 
@@ -1192,8 +1192,11 @@ html[data-gr-accent] [data-gr-drawer] {
   animation: gr-drawer-in 0.2s ease-out;
 }
 @media (prefers-reduced-motion: reduce) { html[data-gr-accent] [data-gr-drawer] { animation: none; } }
+/* A closed <dialog> stays hidden: GitHub keeps them in the page (one per merge queue
+   entry), and the drawer rule above would otherwise show them on load and after closing. */
+html[data-gr-accent] dialog[data-gr-drawer]:not([open]) { display: none !important; }
 /* the page doesn't scroll behind the drawer */
-html[data-gr-accent]:has([data-gr-drawer]) { overflow: hidden !important; }
+html[data-gr-accent]:has(:is(dialog[open], :not(dialog))[data-gr-drawer]) { overflow: hidden !important; }
 
 /* Files changed: subtle "@@ … @@" lines (previously strong blue + purple), not competing with the code */
 html[data-gr-accent][data-color-mode][data-light-theme][data-dark-theme] {
