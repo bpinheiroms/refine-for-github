@@ -418,8 +418,6 @@ const GRCockpit = (() => {
       toggle("data-gr-cockpit-off", "Show original Overview", "Hide original Overview", "gr-orig"));
 
     if (!open) { el.replaceChildren(); return; } // merged/closed: nothing to do, the GitHub card already says so
-    // Summary off: only the rare actions stay (GitHub's own buttons for them are hidden with the comment form).
-    if (!SHOW_SUMMARY) { el.replaceChildren(foot); return; }
     el.replaceChildren(h("div", { class: "gr-verdict" }, h("h2", {}, verdict)), ...[list, foot].filter(Boolean));
   }
 
@@ -1079,7 +1077,8 @@ const GRCockpit = (() => {
 
     const { threads, comments, ...main } = m;
     const sig = JSON.stringify(main);
-    if (sig !== renderedSig) { renderedSig = sig; render(m); }
+    // Summary off: the rare actions (draft, archive, close) live in the header's Actions menu (content.js).
+    if (SHOW_SUMMARY && sig !== renderedSig) { renderedSig = sig; render(m); }
     const psig = JSON.stringify({ threads, comments });
     // A conversation moved into the modal is not on the page: keep the panel as it was
     // until the modal closes (otherwise its card and count vanish meanwhile).

@@ -450,6 +450,13 @@
       return b;
     };
     const sep = () => Object.assign(document.createElement("hr"), { className: "gr-am-sep" });
+    // Rare PR actions: GitHub's own buttons, wherever they are (the classic comment box and
+    // sidebar may sit in our panel); only offered when the page has them.
+    const open = !root.hasAttribute("data-gr-pr-done");
+    const pageBtn = (re) => open && [...document.querySelectorAll("main button, main a, main summary, main [role='menuitem']")]
+      .find((x) => !x.closest("#gr-cockpit, #gr-modal, .gr-am, .gr-ed, .gr-new, .gr-composer") && re.test((x.textContent || "").trim()));
+    const [draft, archive, close] = [/^convert to draft$/i, /^archive pull request$/i, /^close pull request$/i].map(pageBtn);
+    const danger = (b) => (b && b.classList.add("gr-am-danger"), b);
     const copy = async (t, b) => { try { await navigator.clipboard.writeText(t); } catch {} };
     const menu = document.createElement("div");
     menu.className = "gr-am"; menu.setAttribute("role", "menu");
@@ -464,6 +471,10 @@
         p.review && root.hasAttribute("data-gr-pr-done") && item("Leave a review", () => p.review.click(), "comment only"),
         item("Download .patch", () => (location.href = `${base}.patch`)),
         item("Download .diff", () => (location.href = `${base}.diff`)),
+        (draft || archive || close) && sep(),
+        draft && item("Convert to draft", () => draft.click()),
+        archive && danger(item("Archive pull request", () => archive.click())),
+        close && danger(item("Close pull request", () => close.click())),
         (p.preview || p.overview) && sep(),
         p.preview && item("Switch to classic view", () => p.preview.click(), "Preview options"),
         p.overview && item("Switch to Overview page", () => p.overview.click(), "new view"));

@@ -358,10 +358,6 @@ html[data-gr-pr-number] .gr-pr-num:hover {
 /* The summary is off (SHOW_SUMMARY in cockpit.js): GitHub's merge box stays visible and
    #gr-cockpit is only an empty anchor for the panel. */
 #gr-cockpit:empty { display: none !important; }
-/* Only the footer is left: "More actions" sits at the right, just above the merge box */
-#gr-cockpit:has(> .gr-foot:only-child) { margin-bottom: 8px; }
-#gr-cockpit > .gr-foot:only-child { justify-content: flex-end; margin-top: 0; }
-#gr-cockpit > .gr-foot:only-child .gr-menu { left: auto; right: 0; }
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar]):not([data-gr-stacked]) [data-gr-pane] {
   display: none !important;
 }
@@ -990,6 +986,7 @@ html[data-gr-actions-inline] [data-gr-pr-header] > [class*="prc-PageHeader-Title
 }
 .gr-am-item { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 7px 10px; border: 0; border-radius: 8px; background: none; color: var(--fgColor-default); text-align: left; cursor: pointer; font: inherit; }
 .gr-am-item:hover { background: var(--bgColor-neutral-muted, #262c36); }
+.gr-am-item.gr-am-danger { color: var(--fgColor-danger, #f85149); }
 .gr-am-item em { font-style: normal; color: var(--fgColor-muted); font-size: 11.5px; font-family: var(--fontStack-monospace, ui-monospace, monospace); }
 .gr-am-sep { margin: 4px 6px; border: 0; border-top: 1px solid var(--borderColor-muted); }
 
