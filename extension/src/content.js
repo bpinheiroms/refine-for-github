@@ -108,9 +108,10 @@
     if (/\/(issues|pull)\/\d+/.test(location.pathname)) {
       for (const el of document.querySelectorAll("[data-gr-row], [data-gr-title], [data-gr-list]")) {
         if (el.closest("#gr-panel, #gr-cockpit, #gr-modal")) continue;
-        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft", "data-gr-queued"]) el.removeAttribute(a);
+        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft", "data-gr-queued", ...STACK_ATTRS]) el.removeAttribute(a);
+        el.style?.removeProperty("--gr-ord");
       }
-      document.querySelectorAll("main .gr-bot-toggle").forEach((t) => t.remove());
+      document.querySelectorAll("main .gr-bot-toggle, main .gr-stack-head").forEach((t) => t.remove());
       return;
     }
     const lists = new Set();
@@ -136,15 +137,129 @@
       row.toggleAttribute("data-gr-queued", queued);
       row.toggleAttribute("data-gr-bot", isBot);
       row.toggleAttribute("data-gr-draft", !isBot && !queued && row.getAttribute("data-gr-state") === "draft");
+      const stack = !isBot && !queued && stackOf(row);
+      if (stack) {
+        row.setAttribute("data-gr-stack-pos", stack.pos);
+        row.setAttribute("data-gr-stack-total", stack.total);
+        row.setAttribute("data-gr-stack-id", stack.id);
+        row.setAttribute("data-gr-stack-author", authorText.trim());
+      } else for (const a of STACK_ATTRS) row.removeAttribute(a);
 
       if (row.parentElement) lists.add(row.parentElement);
     }
     for (const list of lists) {
       list.setAttribute("data-gr-list", "");
+      groupStacks(list);
       ensureBotToggle(list);
       ensureDraftToggle(list);
       ensureQueueToggle(list);
     }
+  }
+
+  // ---------- Stacked PRs ----------
+  // A PR in a stack shows the stack icon and its place in it ("2/3"). PRs of the same
+  // stack are shown together, in merge order (1 → n), under one header, at the place
+  // of the stack's first PR in the list. Nothing is moved: CSS `order` again.
+  //
+  // Which stack a PR belongs to: GitHub's stack number when the badge exposes it
+  // (link, label, tooltip). Otherwise: same author + same stack size + same ticket
+  // (SPRK-123) in the title. Two stacks must never be merged into one, so a group
+  // where a position repeats (two "1/3") is left alone.
+  const STACK_ATTRS = ["data-gr-stack", "data-gr-stack-pos", "data-gr-stack-total", "data-gr-stack-id", "data-gr-stack-author", "data-gr-stack-closed", "data-gr-stack-last"];
+  // "Stack #19177" or a /stacks/19177 link. Not "Pull request stack, position 3 of 3".
+  const STACK_ID = /\/stacks\/(\d+)|\bstack\s*#\s*(\d+)/i;
+  const TICKET = /\b[A-Z][A-Z0-9]+-\d+\b/;
+  const FRACTION = /\b(\d+)\s*\/\s*(\d+)\b/g;
+
+  function stackOf(row) {
+    const icon = [...row.querySelectorAll(".octicon-stack")]
+      .find((el) => !el.closest("dialog, [role='dialog'], [data-gr-title], .markdown-body"));
+    if (!icon) return null;
+    // The badge: the closest wrapper of the icon with exactly one "n/m" in it
+    // (higher up, the checks "38/42" would also match).
+    let badge = icon.parentElement, m = null;
+    for (let up = 0; badge && badge !== row && up < 4; up++, badge = badge.parentElement) {
+      const all = [...badge.textContent.matchAll(FRACTION)];
+      if (all.length > 1) return null;
+      if (all.length === 1) { m = all[0]; break; }
+    }
+    if (!m) return null;
+    const pos = +m[1], total = +m[2];
+    if (!pos || !total || pos > total) return null;
+    // GitHub's stack number, if the badge or its tooltip carries it.
+    let id = "";
+    for (let el = icon; el && el !== row && !id; el = el.parentElement) {
+      const texts = ["href", "aria-label", "title", "data-hovercard-url"].map((a) => el.getAttribute(a) || "");
+      for (const a of ["aria-describedby", "aria-labelledby"])
+        for (const ref of (el.getAttribute(a) || "").split(/\s+/)) if (ref) texts.push(document.getElementById(ref)?.textContent || "");
+      id = texts.map((t) => { const m = STACK_ID.exec(t); return m && (m[1] || m[2]); }).find(Boolean) || "";
+    }
+    return { pos, total, id };
+  }
+
+  const STACK_ICON = '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M7.122.392a1.75 1.75 0 0 1 1.756 0l5.003 2.902c.83.481.83 1.68 0 2.162L8.878 8.358a1.75 1.75 0 0 1-1.756 0L2.119 5.456a1.251 1.251 0 0 1 0-2.162ZM8.125 1.69a.248.248 0 0 0-.25 0l-4.63 2.685 4.63 2.685a.248.248 0 0 0 .25 0l4.63-2.685ZM1.601 7.789a.75.75 0 0 1 1.025-.273l5.249 3.044a.248.248 0 0 0 .25 0l5.249-3.044a.75.75 0 0 1 .752 1.298l-5.248 3.044a1.75 1.75 0 0 1-1.756 0L1.874 8.814A.75.75 0 0 1 1.6 7.789Zm0 3.5a.75.75 0 0 1 1.025-.273l5.249 3.044a.248.248 0 0 0 .25 0l5.249-3.044a.75.75 0 0 1 .752 1.298l-5.248 3.044a1.75 1.75 0 0 1-1.756 0l-5.248-3.044a.75.75 0 0 1-.273-1.025Z"/></svg>';
+  const CHEVRON = '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/></svg>';
+
+  function groupStacks(list) {
+    const rows = [...list.querySelectorAll(":scope > [data-gr-row]")];
+    const groups = new Map();
+    rows.forEach((row, i) => {
+      for (const a of ["data-gr-stack", "data-gr-stack-closed", "data-gr-stack-last"]) row.removeAttribute(a);
+      // Rows keep their list order; a stack takes the slot of its first PR.
+      row.style.setProperty("--gr-ord", -100000 + i * 100);
+      if (!row.hasAttribute("data-gr-stack-pos")) return;
+      const title = row.querySelector("[data-gr-title]")?.textContent.trim() || "";
+      const ticket = TICKET.exec(title)?.[0] || "";
+      const id = row.getAttribute("data-gr-stack-id");
+      const total = row.getAttribute("data-gr-stack-total");
+      const key = id ? `#${id}` : `${row.getAttribute("data-gr-stack-author")}|${total}|${ticket}`;
+      if (!groups.has(key)) groups.set(key, { key, id, ticket, total: +total, first: i, rows: [] });
+      groups.get(key).rows.push({ row, pos: +row.getAttribute("data-gr-stack-pos") });
+    });
+
+    const heads = new Set();
+    for (const g of groups.values()) {
+      const positions = new Set(g.rows.map((r) => r.pos));
+      // Fewer than two PRs, or a repeated position (two different stacks): no group.
+      if (g.rows.length < 2 || positions.size !== g.rows.length) continue;
+      const base = -100000 + g.first * 100;
+      const closed = sessionStorage.getItem(`gr-stack-closed:${g.key}`) === "1";
+      g.rows.sort((a, b) => a.pos - b.pos);
+      g.rows.forEach(({ row, pos }, n) => {
+        row.setAttribute("data-gr-stack", g.key);
+        row.style.setProperty("--gr-ord", base + pos);
+        row.removeAttribute("data-gr-draft"); // a draft stays inside its stack
+        row.toggleAttribute("data-gr-stack-closed", closed);
+        row.toggleAttribute("data-gr-stack-last", n === g.rows.length - 1);
+      });
+
+      let head = [...list.querySelectorAll(":scope > .gr-stack-head")].find((h) => h.dataset.key === g.key);
+      if (!head) {
+        head = document.createElement("button");
+        head.type = "button";
+        head.className = "gr-stack-head";
+        head.dataset.key = g.key;
+        head.addEventListener("click", () => {
+          const close = head.getAttribute("aria-expanded") === "true";
+          sessionStorage.setItem(`gr-stack-closed:${g.key}`, close ? "1" : "");
+          scheduleTag();
+        });
+        list.appendChild(head);
+      }
+      heads.add(head);
+      head.style.setProperty("--gr-ord", base);
+      head.setAttribute("aria-expanded", String(!closed));
+      const name = g.ticket || "Stack";
+      const count = g.rows.length === g.total ? `${g.total} PRs` : `${g.rows.length} of ${g.total} PRs here`;
+      const text = `${name}|${count}|${g.id}`;
+      if (head.dataset.text !== text) {
+        head.dataset.text = text;
+        head.innerHTML = `<span class="gr-stack-icon" aria-hidden="true">${STACK_ICON}</span><span class="gr-stack-name"></span><span class="gr-stack-meta"></span><span class="gr-chevron" aria-hidden="true">${CHEVRON}</span>`;
+        head.querySelector(".gr-stack-name").textContent = name;
+        head.querySelector(".gr-stack-meta").textContent = `Stack${g.id ? ` #${g.id}` : ""} · ${count} · merge order 1 → ${g.total}`;
+      }
+    }
+    for (const h of list.querySelectorAll(":scope > .gr-stack-head")) if (!heads.has(h)) h.remove();
   }
 
   // PR list: "Compact" density by default. Clicks GitHub's own button once
@@ -869,7 +984,7 @@
   function tag() {
     if (!settings.enabled) {
       document.getElementById("gr-toc")?.remove();
-      document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group").forEach((el) => el.remove());
+      document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group, .gr-stack-head").forEach((el) => el.remove());
       document.querySelectorAll("[data-gr-queue-sig]").forEach((el) => el.removeAttribute("data-gr-queue-sig"));
       GRCockpit.update({ settings, root, textNodes });
       syncHeader();

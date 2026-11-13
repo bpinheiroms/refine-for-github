@@ -188,6 +188,33 @@ html[data-gr-group-bots] [data-gr-list]:not([data-gr-bots-open]):has(> .gr-bot-t
   display: none !important;
 }
 
+/* Stacked PRs: one header per stack, its PRs right below in merge order.
+   --gr-ord (set by content.js) keeps every other row in its list position. */
+html[data-gr-group-bots] [data-gr-list] > [data-gr-row]:not([data-gr-draft]):not([data-gr-bot]):not([data-gr-queued]),
+html[data-gr-group-bots] [data-gr-list] > .gr-stack-head { order: var(--gr-ord, 0); }
+html[data-gr-group-bots] [data-gr-list] > [data-gr-stack-closed] { display: none !important; }
+.gr-stack-head { display: none; }
+html[data-gr-group-bots] .gr-stack-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  margin-top: 4px; padding: 6px 12px 6px 8px;
+  border: 0; border-radius: var(--gr-radius-card, 12px);
+  background: transparent; color: var(--fgColor-muted);
+  font: 400 12px/1.4 var(--fontStack-sansSerif, sans-serif);
+  text-align: left; cursor: pointer;
+}
+html[data-gr-group-bots] .gr-stack-head:hover { color: var(--fgColor-default); background: var(--bgColor-neutral-muted, rgba(101,108,118,.12)); }
+.gr-stack-head .gr-stack-icon {
+  display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 50%;
+  color: var(--gr-accent, var(--fgColor-accent)); background: var(--bgColor-accent-muted, rgba(56,139,253,.15));
+}
+.gr-stack-head svg { display: block; }
+.gr-stack-head .gr-stack-name { font-weight: 600; color: var(--fgColor-default); font-variant-numeric: tabular-nums; }
+.gr-stack-head .gr-chevron { margin-left: auto; display: inline-grid; place-items: center; transform: rotate(90deg); transition: transform 0.15s; }
+.gr-stack-head[aria-expanded="false"] .gr-chevron { transform: none; }
+/* Members: indented under their header */
+html[data-gr-group-bots] [data-gr-list] > [data-gr-stack] { margin-left: 24px; }
+html[data-gr-group-bots] [data-gr-list] > [data-gr-stack-last] { margin-bottom: 8px; }
+
 .gr-bot-toggle { display: none; }
 html[data-gr-group-bots] .gr-bot-toggle {
   display: flex;
