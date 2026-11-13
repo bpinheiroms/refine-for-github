@@ -95,12 +95,12 @@ refine.css ◀──────────── only targets data-gr-* ◀─
 `prototype/real/build.py` downloads public pull request pages, strips GitHub's scripts and injects the whole extension, to test detection against real HTML.
 
 ```
-python3 prototype/real/build.py BridgLabs/opencodereview 104 101
+python3 prototype/real/build.py owner/repo 123 124
 cd prototype/real && python3 -m http.server 8766
-# http://127.0.0.1:8766/BridgLabs/opencodereview/pull/104/
+# http://127.0.0.1:8766/owner/repo/pull/123/
 ```
 
-For the logged-in React UI, save the rendered DOM from the browser and pass the file instead of a number (`python3 prototype/real/build.py owner/repo ~/Downloads/pr-81.html`). Saved pages are ignored by Git because they can contain private content.
+For the logged-in React UI, save the rendered DOM from the browser and pass the file instead of a number (`python3 prototype/real/build.py owner/repo ~/Downloads/pr-123.html`). Saved pages are ignored by Git because they can contain private content.
 
 ## Ideas
 

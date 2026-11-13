@@ -4,16 +4,16 @@ Downloads public pull request pages, strips GitHub's scripts (only the HTML the
 server rendered is kept) and injects the whole extension: refine.css,
 settings.js, cockpit.js and content.js. No API: the extension only reads the page.
 
-    python3 prototype/real/build.py BridgLabs/opencodereview 104 101
+    python3 prototype/real/build.py owner/repo 123 124
     cd prototype/real && python3 -m http.server 8766
-    → http://127.0.0.1:8766/BridgLabs/opencodereview/pull/104/
+    → http://127.0.0.1:8766/owner/repo/pull/123/
 
 The URL must look like /owner/repo/pull/N because that is what the extension reads.
 
 Logged-in page (new Overview, rendered by React): save the DOM in the browser and
 pass the file instead of the number:
 
-    python3 prototype/real/build.py BridgLabs/opencodereview ~/Downloads/pr-81.html
+    python3 prototype/real/build.py owner/repo ~/Downloads/pr-123.html
 """
 import pathlib, re, subprocess, sys
 
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     owner, repo = sys.argv[1].split("/")
     for n in sys.argv[2:]:
         f = pathlib.Path(n).expanduser()
-        if f.is_file():  # DOM saved from the browser: the number comes from the file name (pr-81.html)
+        if f.is_file():  # DOM saved from the browser: the number comes from the file name (pr-123.html)
             build(owner, repo, int(re.search(r"(\d+)", f.stem).group(1)), f)
         else:
             build(owner, repo, int(n))
