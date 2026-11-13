@@ -836,9 +836,10 @@ const GRCockpit = (() => {
     const resolveBtn = canResolve ? h("button", { type: "button", class: "gr-btn", onclick: () => send(true) }, "Resolve") : null;
     const syncLabel = () => { if (resolveBtn) resolveBtn.textContent = field.value.trim() ? "Reply and resolve" : "Resolve"; };
     const send = (resolve) => {
-      if (engineBusy) { status.textContent = "Wait for the preview or upload to finish."; return; }
       const body = field.value.trim();
       if (!body && !resolve) { field.focus(); return; }
+      // Only a comment reply goes through the hidden page box; a code thread uses its own.
+      if (engineBusy && kind !== "threads") { status.textContent = "Wait for the preview or upload to finish."; return; }
       const sent = body ? submitReply(kind, orig, body) : true;
       if (!sent) { status.textContent = "Couldn't find GitHub's reply box here. Use the link at the top to open it on GitHub."; return; }
       const resolved = resolve ? clickIn(orig, /^resolve( conversation)?\b/i) : false;
