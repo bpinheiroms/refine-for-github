@@ -494,7 +494,7 @@
     // it overlays the content). Until then, its buttons move down to the title row.
     const wide = innerWidth >= 768;
     // Desktop: bar only appears on scroll. Mobile: bar always visible (without repeating the title while it is in view).
-    const one = active && !!p.bar && !!title && title.getBoundingClientRect().bottom > (wide ? 56 : p.bar.getBoundingClientRect().bottom + 4);
+    const one = active && !!p.bar && !!p.barActs && !!title && title.getBoundingClientRect().bottom > (wide ? 56 : p.bar.getBoundingClientRect().bottom + 4);
     root.toggleAttribute("data-gr-one-header", one);
     let btn = document.querySelector(".gr-am-btn");
     if (!active) { btn?.remove(); closeActionsMenu(); if (p.acts) p.acts.style.transform = ""; if (p.barActs) p.barActs.style.transform = ""; return; }
@@ -815,7 +815,8 @@
         || b.getAttribute("aria-label") || b.getAttribute("title") || "";
       if (t && b.getAttribute("data-gr-label") !== t) b.setAttribute("data-gr-label", t);
       if (t && b.title !== t) b.title = t;
-    }    groupQueueByEstimate();
+    }
+    groupQueueByEstimate();
   }
 
   // Merge queue: entries grouped by their estimated merge time ("Next 30 minutes",
@@ -857,7 +858,8 @@
   function tag() {
     if (!settings.enabled) {
       document.getElementById("gr-toc")?.remove();
-      document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net").forEach((el) => el.remove());
+      document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group").forEach((el) => el.remove());
+      document.querySelectorAll("[data-gr-queue-sig]").forEach((el) => el.removeAttribute("data-gr-queue-sig"));
       GRCockpit.update({ settings, root, textNodes });
       syncHeader();
       return;
