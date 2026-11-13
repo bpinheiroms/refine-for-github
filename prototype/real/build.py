@@ -29,6 +29,34 @@ window.chrome = { storage: { sync: { get(d, cb) { cb(d); } }, onChanged: { addLi
 <script src="/__ext/src/cockpit.js"></script>
 <script src="/__ext/src/content.js"></script>"""
 
+VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+def inner(html, start):
+    """(begin, end) of the content of the element whose start tag begins at `start`."""
+    open_end = html.index(">", start) + 1
+    depth = 1
+    for m in re.compile(r"<(/?)([a-zA-Z][\w-]*)[^>]*?(/?)>").finditer(html, open_end):
+        closing, name, selfclose = m.group(1), m.group(2).lower(), m.group(3)
+        if name in VOID or selfclose:
+            continue
+        depth += -1 if closing else 1
+        if depth == 0:
+            return open_end, m.start()
+    raise ValueError("unbalanced HTML")
+
+def restore_moved(html):
+    """GitHub nodes the extension moved into its panel (comment box, sidebar) go back
+    to the marker it left in their place, so dropping the panel does not drop them."""
+    for host, mark in (("gr-gh-composer", "<!--gr-composer-->"), ("gr-details", "<!--gr-details-->")):
+        m = re.search(rf'<div class="{host}"[^>]*>', html)
+        if not m or mark not in html:
+            continue
+        b, e = inner(html, m.start())
+        node = html[b:e]
+        html = html[:b] + html[e:]
+        html = html.replace(mark, node, 1)
+    return html
+
 def build(owner, repo, number, saved=None):
     if saved:
         html = saved.read_text()
@@ -37,6 +65,7 @@ def build(owner, repo, number, saved=None):
                               check=True, capture_output=True, text=True).stdout
     html = re.sub(r"<script\b[^>]*>.*?</script>", "", html, flags=re.S)  # rendered HTML only
     if saved:  # saved with the extension on: drop its nodes and tags, the bench re-runs it
+        html = restore_moved(html)
         html = re.sub(r'<(aside|section) id="gr-(panel|cockpit)".*?</\1>', "", html, flags=re.S)
         html = re.sub(r'<(button|span) [^>]*class="gr-(copy-link|net|am-btn|pr-num)".*?</\1>', "", html, flags=re.S)
         html = re.sub(r'\sdata-gr-[\w-]+(="[^"]*")?', "", html)
