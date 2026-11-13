@@ -162,9 +162,10 @@
   // of the stack's first PR in the list. Nothing is moved: CSS `order` again.
   //
   // Which stack a PR belongs to: GitHub's stack number when the badge exposes it
-  // (link, label, tooltip). Otherwise: same author + same stack size + same ticket
-  // (SPRK-123) in the title. Two stacks must never be merged into one, so a group
-  // where a position repeats (two "1/3") is left alone.
+  // (link, label, tooltip). Otherwise: same repository + same author + same stack size
+  // + same ticket (SPRK-123) in the title; without a ticket there is no group. Two
+  // stacks must never be merged into one, so a group where a position repeats
+  // (two "1/3") is left alone too.
   const STACK_ATTRS = ["data-gr-stack", "data-gr-stack-pos", "data-gr-stack-total", "data-gr-stack-id", "data-gr-stack-author", "data-gr-stack-closed", "data-gr-stack-last"];
   // "Stack #19177" or a /stacks/19177 link. Not "Pull request stack, position 3 of 3".
   const STACK_ID = /\/stacks\/(\d+)|\bstack\s*#\s*(\d+)/i;
@@ -206,11 +207,16 @@
       // Rows keep their list order; a stack takes the slot of its first PR.
       row.style.setProperty("--gr-ord", -100000 + i * 100);
       if (!row.hasAttribute("data-gr-stack-pos")) return;
-      const title = row.querySelector("[data-gr-title]")?.textContent.trim() || "";
-      const ticket = TICKET.exec(title)?.[0] || "";
+      const link = row.querySelector("[data-gr-title]");
+      const ticket = TICKET.exec(link?.textContent || "")?.[0] || "";
       const id = row.getAttribute("data-gr-stack-id");
+      // Without GitHub's number, the ticket is required: a stack missing some of its
+      // PRs (merged ones are not in the open list) shows no repeated position.
+      if (!id && !ticket) return;
+      // owner/repo: dashboards and search list PRs from several repositories.
+      const repo = /^(?:https?:\/\/[^/]+)?\/([^/]+\/[^/]+)\/pull\//.exec(link?.getAttribute("href") || "")?.[1] || "";
       const total = row.getAttribute("data-gr-stack-total");
-      const key = id ? `#${id}` : `${row.getAttribute("data-gr-stack-author")}|${total}|${ticket}`;
+      const key = id ? `${repo}#${id}` : `${repo}|${row.getAttribute("data-gr-stack-author")}|${total}|${ticket}`;
       if (!groups.has(key)) groups.set(key, { key, id, ticket, total: +total, first: i, rows: [] });
       groups.get(key).rows.push({ row, pos: +row.getAttribute("data-gr-stack-pos") });
     });
