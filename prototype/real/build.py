@@ -30,31 +30,47 @@ window.chrome = { storage: { sync: { get(d, cb) { cb(d); } }, onChanged: { addLi
 <script src="/__ext/src/content.js"></script>"""
 
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+# A comment (skipped), or a tag whose attributes may hold quoted ">" characters.
+TAG = re.compile(r"""<!--.*?-->|<(/?)([a-zA-Z][\w-]*)((?:"[^"]*"|'[^']*'|[^'">])*)>""", re.S)
 
 def inner(html, start):
     """(begin, end) of the content of the element whose start tag begins at `start`."""
-    open_end = html.index(">", start) + 1
+    open_end = TAG.match(html, start).end()
     depth = 1
-    for m in re.compile(r"<(/?)([a-zA-Z][\w-]*)[^>]*?(/?)>").finditer(html, open_end):
-        closing, name, selfclose = m.group(1), m.group(2).lower(), m.group(3)
-        if name in VOID or selfclose:
+    for m in TAG.finditer(html, open_end):
+        if not m.group(2):  # comment
+            continue
+        closing, name, attrs = m.group(1), m.group(2).lower(), m.group(3)
+        if name in VOID or attrs.rstrip().endswith("/"):
             continue
         depth += -1 if closing else 1
         if depth == 0:
             return open_end, m.start()
     raise ValueError("unbalanced HTML")
 
-def restore_moved(html):
-    """GitHub nodes the extension moved into its panel (comment box, sidebar) go back
-    to the marker it left in their place, so dropping the panel does not drop them."""
-    for host, mark in (("gr-gh-composer", "<!--gr-composer-->"), ("gr-details", "<!--gr-details-->")):
-        m = re.search(rf'<div class="{host}"[^>]*>', html)
-        if not m or mark not in html:
-            continue
+def put_back(html, host_re, mark):
+    """Move the content of the first non-empty element matching `host_re` to `mark`."""
+    if mark not in html:
+        return html
+    for m in re.finditer(host_re, html):
         b, e = inner(html, m.start())
         node = html[b:e]
-        html = html[:b] + html[e:]
-        html = html.replace(mark, node, 1)
+        if node.strip():
+            return (html[:b] + html[e:]).replace(mark, node, 1)
+    return html
+
+def restore_moved(html):
+    """GitHub nodes the extension moved (comment box and sidebar into its panel, a
+    conversation into its modal) go back to the marker it left in their place, so
+    dropping the extension's nodes does not drop them."""
+    # The comment box sits in the panel's Comments tab or, with a reply modal open, in its footer.
+    html = put_back(html, r'<div class="[^"]*\bgr-gh-composer\b[^"]*"[^>]*>', "<!--gr-composer-->")
+    html = put_back(html, r'<div class="gr-details"[^>]*>', "<!--gr-details-->")
+    html = put_back(html, r'<div class="gr-mbody"[^>]*>', "<!--gr-modal-->")
+    m = re.search(r'<div id="gr-modal"[^>]*>', html)
+    if m:
+        _, e = inner(html, m.start())
+        html = html[:m.start()] + html[html.index(">", e) + 1:]
     return html
 
 def build(owner, repo, number, saved=None):
