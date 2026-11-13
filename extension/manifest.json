@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Refine for GitHub",
   "short_name": "Refine",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A cleaner GitHub pull request page: what's left to merge, conversations in a side panel, compact lists and checks.",
   "minimum_chrome_version": "116",
   "icons": {
