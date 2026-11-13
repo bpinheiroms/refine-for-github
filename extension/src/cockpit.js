@@ -740,6 +740,7 @@ const GRCockpit = (() => {
     const engine = pageComposer();
     if (!engine || !files.length || engineBusy) { status.textContent = "Couldn't attach here."; return; }
     engineBusy = true;
+    field.dataset.grUploading = "1"; // this field's own send waits for the link
     const saved = engine.value;
     try {
       fill(engine, "");
@@ -762,6 +763,7 @@ const GRCockpit = (() => {
       const back = pageComposer();
       if (back) fill(back, saved);
       engineBusy = false;
+      delete field.dataset.grUploading;
     }
   }
 
@@ -811,7 +813,7 @@ const GRCockpit = (() => {
     const status = h("span", { class: "gr-rstatus" });
     const send = () => {
       // The hidden box is busy with a preview or upload: sending now would mix the two.
-      if (engineBusy) { status.textContent = "Wait for the preview or upload to finish."; return; }
+      if (engineBusy || field.dataset.grUploading) { status.textContent = "Wait for the preview or upload to finish."; return; }
       const body = field.value.trim();
       if (!body) return field.focus();
       const target = pageComposer(), form = target?.closest("form");
@@ -838,8 +840,9 @@ const GRCockpit = (() => {
     const send = (resolve) => {
       const body = field.value.trim();
       if (!body && !resolve) { field.focus(); return; }
-      // Only a comment reply goes through the hidden page box; a code thread uses its own.
-      if (engineBusy && kind !== "threads") { status.textContent = "Wait for the preview or upload to finish."; return; }
+      // A comment reply goes through the hidden page box: wait for any preview or upload.
+      // A code thread uses its own box: wait only for an attachment going into this field.
+      if (field.dataset.grUploading || (engineBusy && kind !== "threads")) { status.textContent = "Wait for the preview or upload to finish."; return; }
       const sent = body ? submitReply(kind, orig, body) : true;
       if (!sent) { status.textContent = "Couldn't find GitHub's reply box here. Use the link at the top to open it on GitHub."; return; }
       const resolved = resolve ? clickIn(orig, /^resolve( conversation)?\b/i) : false;
