@@ -4,6 +4,22 @@ A Chrome and Firefox extension (Manifest V3) that adds a design layer on top of 
 
 ![Refine for GitHub](store/illustration.png)
 
+## Install manually (TL;DR)
+
+Download the zip for your browser from the [latest release](https://github.com/bpinheiroms/refine-for-github/releases/latest), then:
+
+**Chrome** (also Edge, Brave, Arc)
+1. Unzip `refine-for-github-X.Y.Z-chrome.zip` into a folder you will keep (Chrome loads it from there).
+2. Open `chrome://extensions` and turn on **Developer mode** (top right).
+3. Click **Load unpacked** and pick the folder that has `manifest.json`.
+
+**Firefox**
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on…** and pick `refine-for-github-X.Y.Z-firefox.zip` (no need to unzip).
+3. Firefox removes temporary add-ons when it closes: repeat after each restart.
+
+To update: download the new zip, replace the folder (Chrome: then click ⟳ on the extension) or load the new zip again (Firefox), and reload the GitHub tab.
+
 ## Features
 
 | Area | What it does |
@@ -19,6 +35,8 @@ A Chrome and Firefox extension (Manifest V3) that adds a design layer on top of 
 | Popup | Turn everything on or off and pick an accent color (violet, blue, green, orange). |
 
 ## Install (development)
+
+Same steps as the manual install, but load the `extension/` folder of this repository instead of a release zip:
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
 2. Click **Load unpacked** and select the `extension/` folder.
