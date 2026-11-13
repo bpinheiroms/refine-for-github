@@ -418,6 +418,8 @@ const GRCockpit = (() => {
       toggle("data-gr-cockpit-off", "Show original Overview", "Hide original Overview", "gr-orig"));
 
     if (!open) { el.replaceChildren(); return; } // merged/closed: nothing to do, the GitHub card already says so
+    // Summary off: only the rare actions stay (GitHub's own buttons for them are hidden with the comment form).
+    if (!SHOW_SUMMARY) { el.replaceChildren(foot); return; }
     el.replaceChildren(h("div", { class: "gr-verdict" }, h("h2", {}, verdict)), ...[list, foot].filter(Boolean));
   }
 
@@ -678,7 +680,7 @@ const GRCockpit = (() => {
     const sel = v.slice(s, e);
     const wrap = (l, r, ph) => { const t = sel || ph; field.setRangeText(`${l}${t}${r}`, s, e, "end"); field.setSelectionRange(s + l.length, s + l.length + t.length); };
     const lines = (fn) => {
-      s = v.lastIndexOf("\n", s - 1) + 1;
+      s = s > 0 ? v.lastIndexOf("\n", s - 1) + 1 : 0;
       const block = v.slice(s, e);
       const out = block.split("\n").map((l, i) => fn(i) + l).join("\n");
       field.setRangeText(out, s, e, "end");
@@ -810,6 +812,8 @@ const GRCockpit = (() => {
     const field = h("textarea", { class: "gr-reply", rows: "4", placeholder: "Add your comment here…" });
     const status = h("span", { class: "gr-rstatus" });
     const send = () => {
+      // The hidden box is busy with a preview or upload: sending now would mix the two.
+      if (engineBusy) { status.textContent = "Wait for the preview or upload to finish."; return; }
       const body = field.value.trim();
       if (!body) return field.focus();
       const target = pageComposer(), form = target?.closest("form");
@@ -834,6 +838,7 @@ const GRCockpit = (() => {
     const resolveBtn = canResolve ? h("button", { type: "button", class: "gr-btn", onclick: () => send(true) }, "Resolve") : null;
     const syncLabel = () => { if (resolveBtn) resolveBtn.textContent = field.value.trim() ? "Reply and resolve" : "Resolve"; };
     const send = (resolve) => {
+      if (engineBusy) { status.textContent = "Wait for the preview or upload to finish."; return; }
       const body = field.value.trim();
       if (!body && !resolve) { field.focus(); return; }
       const sent = body ? submitReply(kind, orig, body) : true;
@@ -1074,7 +1079,7 @@ const GRCockpit = (() => {
 
     const { threads, comments, ...main } = m;
     const sig = JSON.stringify(main);
-    if (SHOW_SUMMARY && sig !== renderedSig) { renderedSig = sig; render(m); }
+    if (sig !== renderedSig) { renderedSig = sig; render(m); }
     const psig = JSON.stringify({ threads, comments });
     // A conversation moved into the modal is not on the page: keep the panel as it was
     // until the modal closes (otherwise its card and count vanish meanwhile).

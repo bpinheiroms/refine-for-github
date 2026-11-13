@@ -358,6 +358,10 @@ html[data-gr-pr-number] .gr-pr-num:hover {
 /* The summary is off (SHOW_SUMMARY in cockpit.js): GitHub's merge box stays visible and
    #gr-cockpit is only an empty anchor for the panel. */
 #gr-cockpit:empty { display: none !important; }
+/* Only the footer is left: "More actions" sits at the right, just above the merge box */
+#gr-cockpit:has(> .gr-foot:only-child) { margin-bottom: 8px; }
+#gr-cockpit > .gr-foot:only-child { justify-content: flex-end; margin-top: 0; }
+#gr-cockpit > .gr-foot:only-child .gr-menu { left: auto; right: 0; }
 html[data-gr-cockpit-ready]:not([data-gr-cockpit-off]):not([data-gr-show-sidebar]):not([data-gr-stacked]) [data-gr-pane] {
   display: none !important;
 }
@@ -1421,10 +1425,10 @@ html[data-gr-accent] [data-gr-mergebox] [class*="Actions__"] .flex-column { flex
 }
 
 /* Merge queue: group headers by estimated merge time (our own <li>) */
-.gr-queue-group {
+html[data-gr-accent] .gr-queue-group {
   display: flex; align-items: center; gap: 8px; list-style: none;
   padding: 14px 16px 6px; margin: 0; border: 0 !important; background: none !important;
   font: 600 12px/18px var(--fontStack-sansSerif, sans-serif); color: var(--fgColor-muted);
 }
-.gr-queue-group:first-child { padding-top: 8px; }
-.gr-queue-n { padding: 0 6px; border-radius: 999px; background: var(--bgColor-neutral-muted, #262c36); font-variant-numeric: tabular-nums; font-weight: 500; }
+html[data-gr-accent] .gr-queue-group:first-child { padding-top: 8px; }
+html[data-gr-accent] .gr-queue-n { padding: 0 6px; border-radius: 999px; background: var(--bgColor-neutral-muted, #262c36); font-variant-numeric: tabular-nums; font-weight: 500; }
