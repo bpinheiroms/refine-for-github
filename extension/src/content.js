@@ -81,16 +81,21 @@
   // ---------- 2. Semantic tagging ----------
 
   const PR_HREF = /\/[^/]+\/[^/]+\/(pull|issues)\/\d+\/?$/;
-  const BOT_AUTHOR = /(dependabot|renovate|github-actions|\[bot\])/i;
-  const BOT_TITLE = /^(build|chore|fix)\(deps(-dev)?\)|^bump\s/i;
+  // "Dependency updates" group: PRs from the dependency bots, or anything titled like
+  // a dependency bump. Other bots (release, sync, AI agents) are ordinary PRs.
+  const BOT_AUTHOR = /(dependabot|renovate)/i;
+  const BOT_TITLE = /^(build|chore|fix)\(deps(-dev)?\)|^bump\s|^update (dependency|module|[\w@./-]+ to v?\d)|^lock file maintenance/i;
 
   function rowStateOf(row) {
-    const has = (sel) => row.querySelector(sel) !== null;
-    const label = [...row.querySelectorAll("svg[aria-label], [aria-label] > svg")]
+    // Only the row itself: a merge queue row also holds its (hidden) status dialog,
+    // whose check list has skip/fail icons that are not the PR's state.
+    const own = (sel) => [...row.querySelectorAll(sel)].filter((el) => !el.closest("dialog, [role='dialog']"));
+    const has = (sel) => own(sel).length > 0;
+    const label = own("svg[aria-label], [aria-label] > svg")
       .map((el) => (el.getAttribute("aria-label") || el.parentElement.getAttribute("aria-label") || "").toLowerCase())
       .join(" ");
     if (has(".octicon-git-pull-request-draft, .octicon-issue-draft") || label.includes("draft")
-      || [...row.querySelectorAll("span, div")].some((e) => !e.children.length && e.textContent.trim() === "Draft")) return "draft";
+      || own("span, div").some((e) => !e.children.length && e.textContent.trim() === "Draft")) return "draft";
     if (has(".octicon-git-merge") || label.includes("merged")) return "merged";
     if (has(".octicon-git-pull-request-closed, .octicon-skip, .octicon-issue-closed") || label.includes("closed")) return "closed";
     return "open";
@@ -103,7 +108,7 @@
     if (/\/(issues|pull)\/\d+/.test(location.pathname)) {
       for (const el of document.querySelectorAll("[data-gr-row], [data-gr-title], [data-gr-list]")) {
         if (el.closest("#gr-panel, #gr-cockpit, #gr-modal")) continue;
-        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft"]) el.removeAttribute(a);
+        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft", "data-gr-queued"]) el.removeAttribute(a);
       }
       document.querySelectorAll("main .gr-bot-toggle").forEach((t) => t.remove());
       return;
@@ -125,9 +130,12 @@
 
       const authorText = [...row.querySelectorAll('a[data-hovercard-url*="/users/"], a[href*="author%3A"], a[href*="author:"]')]
         .map((a) => a.textContent).join(" ");
-      const isBot = BOT_AUTHOR.test(authorText) || BOT_TITLE.test(link.textContent.trim());
+      // In the merge queue: its own group (they merge on their own, nothing to do).
+      const queued = inMergeQueue(row);
+      const isBot = !queued && (BOT_AUTHOR.test(authorText) || BOT_TITLE.test(link.textContent.trim()));
+      row.toggleAttribute("data-gr-queued", queued);
       row.toggleAttribute("data-gr-bot", isBot);
-      row.toggleAttribute("data-gr-draft", !isBot && row.getAttribute("data-gr-state") === "draft");
+      row.toggleAttribute("data-gr-draft", !isBot && !queued && row.getAttribute("data-gr-state") === "draft");
 
       if (row.parentElement) lists.add(row.parentElement);
     }
@@ -135,6 +143,7 @@
       list.setAttribute("data-gr-list", "");
       ensureBotToggle(list);
       ensureDraftToggle(list);
+      ensureQueueToggle(list);
     }
   }
 
@@ -180,7 +189,7 @@
   // the bot rows.
   function ensureBotToggle(list) {
     const bots = list.querySelectorAll(":scope > [data-gr-bot]").length;
-    let toggle = list.querySelector(":scope > .gr-bot-toggle");
+    let toggle = list.querySelector(":scope > .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle)");
     if (bots < 2) { toggle?.remove(); return; }
 
     if (!toggle) {
@@ -205,6 +214,37 @@
   }
 
   // "N drafts" group: same pattern as the bots group, right before it.
+  // A row is in the merge queue when it shows the merge-queue icon or the "Queued" link
+  // (not counting the hidden status dialog on the queue page).
+  const inMergeQueue = (row) => [...row.querySelectorAll(".octicon-git-merge-queue, a")]
+    .some((el) => !el.closest("dialog, [role='dialog']") && (el.matches(".octicon-git-merge-queue") || /^queued$/i.test(el.textContent.trim())));
+
+  // "N in merge queue" group: same pattern as drafts, right before them.
+  function ensureQueueToggle(list) {
+    const n = list.querySelectorAll(":scope > [data-gr-queued]").length;
+    let toggle = list.querySelector(":scope > .gr-queue-toggle");
+    if (n < 2) { toggle?.remove(); return; }
+    if (!toggle) {
+      toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "gr-bot-toggle gr-queue-toggle";
+      toggle.addEventListener("click", () => {
+        const open = !list.hasAttribute("data-gr-queued-open");
+        list.toggleAttribute("data-gr-queued-open", open);
+        sessionStorage.setItem("gr-queued-open", open ? "1" : "");
+      });
+      list.appendChild(toggle);
+    }
+    if (sessionStorage.getItem("gr-queued-open")) list.setAttribute("data-gr-queued-open", "");
+    const text = `${n} in merge queue`;
+    if (toggle.dataset.text !== text) {
+      toggle.dataset.text = text;
+      // Octicon git-merge-queue
+      toggle.innerHTML = '<span class="gr-bot-icon gr-queue-icon" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M3.75 4.5a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5ZM3 7.75a.75.75 0 0 1 1.5 0v2.878a2.251 2.251 0 1 1-1.5 0Zm.75 5.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm5-7.75a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Zm5.75 2.5a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-1.5 0a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg></span><span class="gr-bot-text"></span><span class="gr-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z"/></svg></span>';
+      toggle.querySelector(".gr-bot-text").textContent = text;
+    }
+  }
+
   function ensureDraftToggle(list) {
     const n = list.querySelectorAll(":scope > [data-gr-draft]").length;
     let toggle = list.querySelector(":scope > .gr-draft-toggle");
@@ -389,6 +429,8 @@
     return { bar, barActs, acts, toggles,
       preview: document.querySelector("[data-gr-preview-toggle]") || find(/preview/i),
       code: find(/^code\b/i), bell: find(/subscribe|notification/i),
+      // Classic Conversation tab: "✨ Try the Overview page" switches to the new UI.
+      overview: find(/try the overview page/i),
       review: barActs && [...barActs.querySelectorAll("button")].find((x) => /ReviewMenuButton/.test(x.className) || /^(submit )?review\b/i.test(labelOf(x))) };
   }
 
@@ -408,6 +450,13 @@
       return b;
     };
     const sep = () => Object.assign(document.createElement("hr"), { className: "gr-am-sep" });
+    // Rare PR actions: GitHub's own buttons, wherever they are (the classic comment box and
+    // sidebar may sit in our panel); only offered when the page has them.
+    const open = !root.hasAttribute("data-gr-pr-done");
+    const pageBtn = (re) => open && [...document.querySelectorAll("main button, main a, main summary, main [role='menuitem']")]
+      .find((x) => !x.closest("#gr-cockpit, #gr-modal, .gr-am, .gr-ed, .gr-new, .gr-composer") && re.test((x.textContent || "").trim()));
+    const [draft, archive, close] = [/^convert to draft$/i, /^archive pull request$/i, /^close pull request$/i].map(pageBtn);
+    const danger = (b) => (b && b.classList.add("gr-am-danger"), b);
     const copy = async (t, b) => { try { await navigator.clipboard.writeText(t); } catch {} };
     const menu = document.createElement("div");
     menu.className = "gr-am"; menu.setAttribute("role", "menu");
@@ -422,8 +471,13 @@
         p.review && root.hasAttribute("data-gr-pr-done") && item("Leave a review", () => p.review.click(), "comment only"),
         item("Download .patch", () => (location.href = `${base}.patch`)),
         item("Download .diff", () => (location.href = `${base}.diff`)),
-        p.preview && sep(),
-        p.preview && item("Switch to classic view", () => p.preview.click(), "Preview options"));
+        (draft || archive || close) && sep(),
+        draft && item("Convert to draft", () => draft.click()),
+        archive && danger(item("Archive pull request", () => archive.click())),
+        close && danger(item("Close pull request", () => close.click())),
+        (p.preview || p.overview) && sep(),
+        p.preview && item("Switch to classic view", () => p.preview.click(), "Preview options"),
+        p.overview && item("Switch to Overview page", () => p.overview.click(), "new view"));
     document.body.append(menu);
     const r = anchor.getBoundingClientRect();
     Object.assign(menu.style, { top: `${Math.round(r.bottom + 6)}px`, left: `${Math.round(Math.max(8, r.right - menu.offsetWidth))}px` });
@@ -437,8 +491,13 @@
     headerRaf = 0;
     const p = headerParts();
     const title = document.querySelector('[class*="prc-PageLayout-HeaderContent"] [class*="prc-PageHeader-TitleArea-"]') || document.querySelector("[data-gr-pr-title]");
-    const active = !!(settings.enabled && (isPullPage() || /\/pull\/\d+\/(changes|files|commits|checks)/.test(location.pathname)) && p.bar && p.barActs);
+    // Classic Conversation tab: no sticky bar, so the button sits on the title row
+    // (inside the PageHeader, over GitHub's hidden buttons).
+    const inline = !p.barActs && p.acts?.closest('[class*="prc-PageHeader-PageHeader-"]');
+    const host = p.barActs || inline;
+    const active = !!(settings.enabled && (isPullPage() || /\/pull\/\d+\/(changes|files|commits|checks)/.test(location.pathname)) && host);
     root.toggleAttribute("data-gr-actions-menu", active);
+    root.toggleAttribute("data-gr-actions-inline", active && !p.barActs);
     // All PR tabs use the full width (Files changed pattern): no centered 1356px box.
     root.toggleAttribute("data-gr-fullpage", active);
     root.toggleAttribute("data-gr-pr-done", /^(merged|closed|mesclado|fechado)$/i.test(document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || ""));
@@ -446,7 +505,7 @@
     // it overlays the content). Until then, its buttons move down to the title row.
     const wide = innerWidth >= 768;
     // Desktop: bar only appears on scroll. Mobile: bar always visible (without repeating the title while it is in view).
-    const one = active && !!title && title.getBoundingClientRect().bottom > (wide ? 56 : p.bar.getBoundingClientRect().bottom + 4);
+    const one = active && !!p.bar && !!p.barActs && !!title && title.getBoundingClientRect().bottom > (wide ? 56 : p.bar.getBoundingClientRect().bottom + 4);
     root.toggleAttribute("data-gr-one-header", one);
     let btn = document.querySelector(".gr-am-btn");
     if (!active) { btn?.remove(); closeActionsMenu(); if (p.acts) p.acts.style.transform = ""; if (p.barActs) p.barActs.style.transform = ""; return; }
@@ -457,7 +516,7 @@
       btn.setAttribute("aria-haspopup", "menu");
       btn.addEventListener("click", (e) => { e.stopPropagation(); openActionsMenu(btn); });
     }
-    if (btn.parentElement !== p.barActs) p.barActs.append(btn);
+    if (btn.parentElement !== host) host.append(btn);
     // Sticky bar with the same margins as the header/content (full width): GitHub
     // centers it in its own box, which does not line up with the content.
     const phEl = title?.closest('[class*="prc-PageHeader-PageHeader-"]');
@@ -466,7 +525,7 @@
       root.style.setProperty("--gr-pad-l", `${Math.max(0, Math.round(r.left - 8))}px`);
       root.style.setProperty("--gr-pad-r", `${Math.max(0, Math.round(document.documentElement.clientWidth - r.right))}px`);
     }
-    p.barActs.style.transform = "";
+    if (p.barActs) p.barActs.style.transform = "";
     if (one && wide) {
       const t = title.getBoundingClientRect(), a = p.barActs.getBoundingClientRect();
       const line = title.querySelector("h1, h2") || title;
@@ -535,8 +594,14 @@
     const node = textNodes(scope, STATUS_TEXT).find((n) => !n.parentElement.closest("nav, [role='tablist'], #gr-cockpit"));
     const body = descBody();
     let el = node?.parentElement;
-    // Classic page (Conversation tab): the merge box has a fixed id.
-    if (!el) return markOnly("data-gr-mergebox", document.querySelector("#partial-pull-merging"));
+    // Classic page (Conversation tab): the merge box has a fixed id / test id, at the end
+    // of the timeline. Only on open PRs: once merged or closed it is GitHub's own
+    // "merged" card (restore/delete branch), which stays visible.
+    if (!el) {
+      const st = document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || "open";
+      return markOnly("data-gr-mergebox", /^(merged|closed|mesclado|fechado)$/i.test(st) ? null
+        : document.querySelector("#partial-pull-merging, [data-testid='mergebox-partial']"));
+    }
     if (!body) return markOnly("data-gr-mergebox", null);
     while (el.parentElement && el.parentElement !== scope && !el.parentElement.contains(body)) el = el.parentElement;
     markOnly("data-gr-mergebox", el);
@@ -560,12 +625,11 @@
   // for anyone who wants to go back to the old one.
   function tagPreviewToggle() {
     const node = textNodes(document.querySelector("main") || document.body, PREVIEW_TEXT)
-      .find((n) => n.parentElement.closest("button, summary, [role='button']"));
+      // Not the Write | Preview tab of a comment box (classic Conversation tab).
+      .find((n) => n.parentElement.closest("button, summary, [role='button']") && !n.parentElement.closest("form, [role='tablist'], [role='tab'], .js-previewable-comment-form"));
     const btn = node?.parentElement.closest("button, summary, [role='button']");
-    if (btn) {
-      markOnly("data-gr-preview-toggle", btn);
-      if (!btn.title) btn.title = "Open to switch back to the classic pull request page";
-    }
+    markOnly("data-gr-preview-toggle", btn || null);
+    if (btn && !btn.title) btn.title = "Open to switch back to the classic pull request page";
   }
 
   // Description table of contents: a floating button (our node, outside the React tree)
@@ -687,10 +751,26 @@
       if (d.closest("#gr-modal, #gr-panel, [class*='prc-PageLayout-SidebarWrapper-']") || d.querySelector("[role='menu'], [role='listbox']")) continue;
       const head = (document.getElementById(d.getAttribute("aria-labelledby") || "")?.textContent
         || d.querySelector("h1, h2, h3, [class*='Title'], [class*='title']")?.textContent || d.getAttribute("aria-label") || "").trim();
-      // checks, merge queue entry status ("Queue entry status details")
-      if (/\bchecks?\b|status details/i.test(head) || /^entry-status-dialog/.test(d.id)) d.setAttribute("data-gr-drawer", "");
+      // checks, merge queue entry status ("Queue entry status details"), stacked PRs ("Stack #19177")
+      if (/\bchecks?\b|status details|^stack\b/i.test(head) || /^entry-status-dialog/.test(d.id)) d.setAttribute("data-gr-drawer", "");
     }
   }
+
+  // Drawer dialogs close on a click outside them (GitHub's dialogs only close from their
+  // own button; centered, that was fine, as a side drawer the page invites the click).
+  document.addEventListener("mousedown", (e) => {
+    const d = [...document.querySelectorAll("[data-gr-drawer]")].find((x) => x.matches("dialog") ? x.open : x.offsetParent !== null || getComputedStyle(x).position === "fixed");
+    if (!d || e.button !== 0) return;
+    const r = d.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    // Menus and tooltips opened from the drawer live outside it (top layer / portals).
+    if (inside || e.target.closest?.("[role='menu'], [role='listbox'], [popover]:not([data-gr-drawer]), #__primerPortalRoot__")) return;
+    const close = d.querySelector("[data-close-dialog-id], button[aria-label='Close'], button[aria-label='Close dialog']");
+    close?.click();
+    // GitHub's button normally closes it; if it is still open right after, close the <dialog> itself.
+    setTimeout(() => { if (d.matches("dialog") && d.open) d.close(); }, 60);
+    e.preventDefault();
+  }, true);
 
   // Merge status panel: tag each check group's type (marker color) and
   // the "Merging is blocked" message that only repeats what another section already said.
@@ -742,15 +822,55 @@
     if (!on) return;
     for (const b of document.querySelectorAll(".hx_merge_queue_entry_status_icon")) {
       const t = (b.getAttribute("aria-labelledby") || "").split(" ").map((id) => document.getElementById(id)?.textContent?.trim()).filter(Boolean).join(" ")
-        || b.getAttribute("aria-label") || "";
+        || (b.id && document.querySelector(`tool-tip[for="${CSS.escape(b.id)}"]`)?.textContent?.trim())
+        || b.getAttribute("aria-label") || b.getAttribute("title") || "";
       if (t && b.getAttribute("data-gr-label") !== t) b.setAttribute("data-gr-label", t);
+      if (t && b.title !== t) b.title = t;
+    }
+    groupQueueByEstimate();
+  }
+
+  // Merge queue: entries grouped by their estimated merge time ("Next 30 minutes",
+  // "Within an hour"…). GitHub lists them in merge order, so each group is one run of
+  // rows; a small header (our own <li>, the list is server-rendered) opens each run.
+  const QUEUE_BUCKETS = [[30, "Next 30 minutes"], [60, "Within an hour"], [120, "1–2 hours"], [Infinity, "More than 2 hours"]];
+  const estimateMinutes = (row) => {
+    const m = row.textContent.replace(/\s+/g, " ").match(/Estimated merge in\s+((?:\d+\s*[dhms]\s*)+)/i);
+    if (!m) return null;
+    let min = 0;
+    for (const [, n, u] of m[1].matchAll(/(\d+)\s*([dhms])/g)) min += +n * { d: 1440, h: 60, m: 1, s: 1 / 60 }[u];
+    return min;
+  };
+  function groupQueueByEstimate() {
+    for (const list of new Set([...document.querySelectorAll("main .hx_merge_queue_entry_status_icon")].map((b) => b.closest("ul")).filter(Boolean))) {
+      const rows = [...list.children].filter((li) => li.matches("li:not(.gr-queue-group)"));
+      const labels = rows.map((r) => { const m = estimateMinutes(r); return m == null ? "No estimate" : QUEUE_BUCKETS.find(([max]) => m <= max)[1]; });
+      // Same groups as last time: leave the page alone (our own inserts re-trigger the observer).
+      const sig = labels.join("|");
+      if (list.getAttribute("data-gr-queue-sig") === sig && list.querySelector(":scope > .gr-queue-group")) continue;
+      list.querySelectorAll(":scope > .gr-queue-group").forEach((g) => g.remove());
+      list.setAttribute("data-gr-queue-sig", sig);
+      // Only worth it with more than one group.
+      if (new Set(labels).size < 2) continue;
+      rows.forEach((row, i) => {
+        if (i > 0 && labels[i] === labels[i - 1]) return;
+        let n = 0;
+        for (let j = i; j < rows.length && labels[j] === labels[i]; j++) n++;
+        const head = document.createElement("li");
+        head.className = "gr-queue-group";
+        head.setAttribute("role", "presentation");
+        head.append(Object.assign(document.createElement("span"), { textContent: labels[i] }),
+          Object.assign(document.createElement("span"), { className: "gr-queue-n", textContent: String(n) }));
+        row.before(head);
+      });
     }
   }
 
   function tag() {
     if (!settings.enabled) {
       document.getElementById("gr-toc")?.remove();
-      document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net").forEach((el) => el.remove());
+      document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group").forEach((el) => el.remove());
+      document.querySelectorAll("[data-gr-queue-sig]").forEach((el) => el.removeAttribute("data-gr-queue-sig"));
       GRCockpit.update({ settings, root, textNodes });
       syncHeader();
       return;
