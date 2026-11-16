@@ -29,7 +29,9 @@
   // Repository code pages (the repo home, the file list, a file, blame) are the
   // largest DOM GitHub has, and the code view mutates on every scroll. They have
   // no PR list and no pull-request layout, so tag() has nothing to do there.
-  const RESERVED_ROOT = /^(settings|notifications|explore|topics|collections|features|login|signup|marketplace|sponsors|orgs|organizations|search|dashboard|new|codespaces|account|apps|enterprise)$/;
+  // GitHub's own top-level routes, never an owner: /pulls/review-requested and
+  // /issues/assigned have two segments like a repository home, but they are lists.
+  const RESERVED_ROOT = /^(pulls|issues|settings|notifications|explore|topics|collections|trending|features|login|signup|marketplace|sponsors|orgs|organizations|users|stars|watching|search|dashboard|new|codespaces|copilot|account|apps|enterprise)$/;
   function isRepoCodePage(path = location.pathname) {
     if (location.hostname !== "github.com") return false;
     const parts = path.split("/").filter(Boolean);
