@@ -56,18 +56,14 @@
     else scheduleTag();
   }
   function scheduleTag() {
-    // Defer the repo settle: this can run while the script is still starting,
-    // before later `let` bindings exist. The frame callback is after that.
-    if (isRepoCodePage()) {
-      if (repoSettled === true) return;
-      if (pending) return;
-      pending = true;
-      requestAnimationFrame(() => { pending = false; onRoute(); });
-      return;
-    }
-    repoSettled = false;
+    // A repository code page needs one settle pass, then nothing until the route changes.
+    if (isRepoCodePage()) { if (repoSettled === true) return; }
+    else repoSettled = false;
     if (pending) return;
     pending = true;
+    // The frame decides from the route at that moment (it may have changed since):
+    // tag() hands repository code pages to onRoute(). Deferred also because this can
+    // run while the script is still starting, before later `let` bindings exist.
     requestAnimationFrame(() => { pending = false; tag(); });
   }
 
@@ -1126,6 +1122,7 @@
     document.getElementById("gr-toc")?.remove();
     document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group, .gr-stack-head").forEach((el) => el.remove());
     document.querySelectorAll("[data-gr-queue-sig]").forEach((el) => el.removeAttribute("data-gr-queue-sig"));
+    tagQueuePage(); // off the queue: clears data-gr-queue on <html>
     closeActionsMenu();
     GRCockpit.update({ settings, root, textNodes });
     syncHeader();
