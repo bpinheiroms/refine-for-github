@@ -38,10 +38,12 @@ jobs:
             if (hosts !== "[\"https://github.com/*\"]") fail("unexpected host permissions: " + hosts);
           '
       - name: Scripts parse
-        run: for f in extension/src/*.js extension/popup/*.js; do node --check "$f"; done
+        run: for f in extension/src/*.js extension/lib/*.js extension/popup/*.js; do node --check "$f"; done
+      - name: Unit tests
+        run: node --test 'test/*.test.js'
       - name: No remote code
         run: |
-          if grep -nE '(eval\(|new Function\(|importScripts\(|<script[^>]+src=["'"'"']https?:)' extension/src/*.js extension/popup/*; then
+          if grep -nE '(eval\(|new Function\(|importScripts\(|<script[^>]+src=["'"'"']https?:)' extension/src/*.js extension/lib/*.js extension/popup/*; then
             echo "remote or dynamic code found"; exit 1
           fi
       - name: Package

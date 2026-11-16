@@ -8,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 version=$(python3 -c "import json;print(json.load(open('extension/manifest.json'))['version'])")
-files=(manifest.json icons popup src)
+files=(manifest.json icons popup src lib)
 mkdir -p dist
 rm -rf dist/firefox "dist/refine-for-github-${version}-"*.zip
 

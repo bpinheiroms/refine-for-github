@@ -25,6 +25,7 @@
 (() => {
   const root = document.documentElement;
   let settings = { ...GR_DEFAULTS };
+  const lib = globalThis.GRLib;
 
   // ---------- SPA navigation ----------
   // GitHub changes pages without reloading (Turbo + React). One MutationObserver
@@ -54,6 +55,7 @@
     }
     if (settings.enabled) root.setAttribute("data-gr-accent", settings.accent);
     else root.removeAttribute("data-gr-accent");
+    if (lib.flags.isOn("telemetry", s)) lib.telemetry.track("settings", settings);
     scheduleTag();
   }
 
@@ -66,7 +68,7 @@
   } catch {}
 
   chrome.storage.sync.get(GR_DEFAULTS, (s) => {
-    applySettings(s);
+    applySettings(lib.merge.withDefaults(GR_DEFAULTS, lib.migrate.migrate(s)));
     try { localStorage.setItem(GR_CACHE_KEY, JSON.stringify(settings)); } catch {}
   });
 
@@ -1011,6 +1013,7 @@
   observe();
   document.addEventListener("turbo:load", scheduleTag);
   window.addEventListener("popstate", scheduleTag);
+  window.addEventListener("pagehide", () => lib.telemetry.flush());
 })();
 // Loaded version (to check in the console whether the extension was reloaded).
 document.documentElement.setAttribute("data-gr-version", chrome.runtime?.getManifest?.().version || "dev");
