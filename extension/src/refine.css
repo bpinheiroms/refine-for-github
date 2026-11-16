@@ -120,7 +120,7 @@ html[data-gr-cards] [data-gr-row]:hover {
 /* A row that holds an open dialog (merge queue: "Queue entry status details" lives
    inside its row): no lift, no clipping. Otherwise hovering the dialog toggles the
    row's transform, which moves/clips the dialog positioned inside it. */
-html[data-gr-cards] [data-gr-row]:has(dialog[open], :not(dialog)[data-gr-drawer]) {
+html[data-gr-cards] [data-gr-row][data-gr-row-dialog] {
   transform: none !important; overflow: visible !important; transition: none !important; box-shadow: none !important;
 }
 
@@ -174,17 +174,17 @@ html[data-gr-group-bots] [data-gr-list] > .gr-bot-toggle:not(.gr-draft-toggle):n
 /* In the merge queue: grouped right after the regular rows, before drafts */
 html[data-gr-group-bots] [data-gr-list] > .gr-queue-toggle { order: 5; }
 html[data-gr-group-bots] [data-gr-list] > [data-gr-queued] { order: 6; }
-html[data-gr-group-bots] [data-gr-list]:not([data-gr-queued-open]):has(> .gr-queue-toggle) > [data-gr-queued] { display: none !important; }
+html[data-gr-group-bots] [data-gr-list][data-gr-has-queued]:not([data-gr-queued-open]) > [data-gr-queued] { display: none !important; }
 [data-gr-queued-open] > .gr-queue-toggle .gr-chevron { transform: rotate(90deg); }
 .gr-bot-toggle .gr-bot-icon.gr-queue-icon { color: var(--fgColor-attention, #d29922); background: var(--bgColor-attention-muted, rgba(187,128,9,.15)); }
 /* Drafts grouped before bots */
 html[data-gr-group-bots] [data-gr-list] > .gr-draft-toggle { order: 7; }
 html[data-gr-group-bots] [data-gr-list] > [data-gr-draft] { order: 8; }
-html[data-gr-group-bots] [data-gr-list]:not([data-gr-drafts-open]):has(> .gr-draft-toggle) > [data-gr-draft] { display: none !important; }
+html[data-gr-group-bots] [data-gr-list][data-gr-has-drafts]:not([data-gr-drafts-open]) > [data-gr-draft] { display: none !important; }
 [data-gr-drafts-open] > .gr-draft-toggle .gr-chevron { transform: rotate(90deg); }
 .gr-bot-toggle .gr-bot-icon.gr-draft-icon { color: var(--fgColor-muted); background: var(--bgColor-neutral-muted, rgba(101,108,118,.2)); }
 html[data-gr-group-bots] [data-gr-list] > [data-gr-bot] { order: 10; }
-html[data-gr-group-bots] [data-gr-list]:not([data-gr-bots-open]):has(> .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle)) > [data-gr-bot] {
+html[data-gr-group-bots] [data-gr-list][data-gr-has-bots]:not([data-gr-bots-open]) > [data-gr-bot] {
   display: none !important;
 }
 
@@ -338,11 +338,11 @@ html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:not(.discussion-sideba
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:not(.discussion-sidebar-item) > * { margin: 0 !important; padding: 0 !important; min-height: 0 !important; background: none !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(h2, h3, [class*="Heading"], [class*="sectionTitle"], [class*="SectionTitle"]) { color: var(--fgColor-muted) !important; font-weight: 500 !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(p, span, a, div) { font-size: 12.5px !important; line-height: 20px !important; padding-block: 0 !important; }
-html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] :is(p, span, a):not(:has(*)) { color: var(--fgColor-muted) !important; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] [data-gr-leaf] { color: var(--fgColor-muted) !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] [data-component="IconButton"],
-html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] button:has(svg):not(:has(span:not(:empty))) { opacity: 0; transition: opacity 0.15s; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] [data-gr-icon-btn] { opacity: 0; transition: opacity 0.15s; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover [data-component="IconButton"],
-html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover button:has(svg) { opacity: 1; }
+html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty]:hover [data-gr-icon-btn] { opacity: 1; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] a { text-decoration: none !important; }
 html[data-gr-compact-sidebar] [data-gr-sb][data-gr-empty] a:hover { text-decoration: underline !important; color: var(--fgColor-default) !important; }
 /* filled labels: slightly smaller pills */
@@ -905,8 +905,8 @@ html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="en
 /* "Showing 4 of 6 review comments" more subtle */
 html[data-gr-accent] [class*="prc-PageLayout-SidebarWrapper-"][data-position="end"] [class*="prc-PageLayout-Sidebar-"] { font-size: 13px; }
 /* With a drawer open (GitHub panel or conversation), the "Contents" index steps aside */
-html:has([class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])) #gr-toc,
-html:has(#gr-modal) #gr-toc { display: none !important; }
+html[data-gr-side-open] #gr-toc,
+html[data-gr-modal-open] #gr-toc { display: none !important; }
 
 /* Comments drawer: lighter controls row. The selector fills the space; the
    filter/sort buttons become subtle icons (no box) like the header ones. */
@@ -977,8 +977,8 @@ html[data-gr-accent] .gr-copy-link:hover { background: var(--bgColor-neutral-mut
 html[data-gr-accent] .gr-copy-link.gr-done { color: var(--fgColor-success, #3fb950); }
 
 /* Drawer open (conversation or GitHub panel): the page behind doesn't scroll; focus is on the drawer */
-html:has(#gr-modal),
-html[data-gr-accent]:has([class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])) {
+html[data-gr-modal-open],
+html[data-gr-accent][data-gr-side-open] {
   overflow: hidden !important; scrollbar-gutter: stable;
 }
 #gr-modal { overscroll-behavior: contain; }
@@ -1132,9 +1132,9 @@ html[data-gr-accent] [data-overview-sidebar-item] li { min-height: 28px !importa
 html[data-gr-accent] [data-overview-sidebar-item] img[class*="Avatar"], html[data-gr-accent] [data-overview-sidebar-item] [data-component="Avatar"] { width: 20px !important; height: 20px !important; }
 
 /* Stacked: commits go to the end of the column (after the conversations), without a big gap */
-html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) { display: flex !important; flex-direction: column !important; }
-html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) > * { order: 0; }
-html[data-gr-stacked]:not([data-gr-cockpit-off]) :has(> #gr-panel[data-stacked]) > :is(section:has(#overview-comments), :has(> section #overview-comments)) { order: 10 !important; margin: 8px 0 0 !important; padding-bottom: 0 !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-panel-host] { display: flex !important; flex-direction: column !important; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-panel-host] > * { order: 0; }
+html[data-gr-stacked]:not([data-gr-cockpit-off]) [data-gr-panel-host] > :is(section:has(#overview-comments), [data-gr-commits-block]) { order: 10 !important; margin: 8px 0 0 !important; padding-bottom: 0 !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) section:has(#overview-comments) { margin-bottom: 0 !important; padding-bottom: 0 !important; min-height: 0 !important; }
 html[data-gr-stacked]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin: 24px 0 8px !important; }
 
@@ -1157,7 +1157,7 @@ html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane],
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] * { padding-left: 0 !important; padding-right: 0 !important; margin-left: 0 !important; }
 html[data-gr-accent] [data-overview-sidebar-item][data-gr-sb] { padding-top: 8px !important; padding-bottom: 8px !important; }
-html[data-gr-accent] :has(> [data-overview-sidebar-item]) { gap: 0 !important; row-gap: 0 !important; }
+html[data-gr-accent] [data-gr-sb-list] { gap: 0 !important; row-gap: 0 !important; }
 
 /* Mobile: the sticky bar shows only Status · Review · Actions while the title is visible */
 @media (max-width: 767.98px) {
@@ -1171,7 +1171,7 @@ html[data-gr-accent] :has(> [data-overview-sidebar-item]) { gap: 0 !important; r
 
 /* Overview commits: dense list (GitHub gives each item ~16px of padding) */
 html[data-gr-accent] [data-testid="timeline-item"][data-item-type="commits"] { padding-block: 0 !important; margin-block: 0 !important; min-height: 0 !important; }
-html[data-gr-accent] :has(> [data-testid="timeline-item"][data-item-type="commits"]) { gap: 0 !important; row-gap: 0 !important; }
+html[data-gr-accent] [data-gr-commit-list] { gap: 0 !important; row-gap: 0 !important; }
 html[data-gr-accent] [data-testid="timeline-commit-group"] { padding-block: 2px !important; margin: 0 !important; }
 html[data-gr-accent] [data-testid="timeline-commit-row"] { min-height: 28px !important; padding-block: 3px !important; margin: 0 !important; gap: 8px; }
 html[data-gr-accent] [data-testid="timeline-commit-row"] [class*="Title__"] { font-size: 13px !important; line-height: 20px !important; }
@@ -1185,11 +1185,11 @@ html[data-gr-accent] [data-testid="timeline-commit-row"] [class*="Title__"] { fl
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-PageLayoutContent-"]:has(#gr-panel[data-stacked]) { row-gap: 0 !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-ContentWrapper-"]:has(#gr-panel[data-stacked]),
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"]:has(#gr-panel[data-stacked]),
-html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) { display: contents !important; }
-html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) > :not(#gr-panel, [data-gr-pane]):not(:empty) { margin-bottom: 24px !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] [data-gr-panel-host] { display: contents !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] [data-gr-panel-host] > :not(#gr-panel, [data-gr-pane]):not(:empty) { margin-bottom: 24px !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) #gr-panel[data-stacked] { margin-bottom: 8px !important; }
 html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [data-gr-pane] { order: 5 !important; margin-bottom: 16px !important; }
-html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] :has(> #gr-panel[data-stacked]) > section:has(#overview-comments) { order: 10 !important; margin-bottom: 0 !important; }
+html[data-gr-stacked][data-gr-show-sidebar]:not([data-gr-cockpit-off]) [class*="prc-PageLayout-Content-"] [data-gr-panel-host] > section:has(#overview-comments) { order: 10 !important; margin-bottom: 0 !important; }
 
 /* PR list search (query builder): filter values only colored, without the
    background "box" that got clipped and misaligned with the text. */
@@ -1230,7 +1230,7 @@ html[data-gr-accent] [data-gr-drawer] {
    entry), and the drawer rule above would otherwise show them on load and after closing. */
 html[data-gr-accent] dialog[data-gr-drawer]:not([open]) { display: none !important; }
 /* the page doesn't scroll behind the drawer */
-html[data-gr-accent]:has(:is(dialog[open], :not(dialog))[data-gr-drawer]) { overflow: hidden !important; }
+html[data-gr-accent][data-gr-drawer-open] { overflow: hidden !important; }
 
 /* Files changed: subtle "@@ … @@" lines (previously strong blue + purple), not competing with the code */
 html[data-gr-accent][data-color-mode][data-light-theme][data-dark-theme] {

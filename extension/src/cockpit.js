@@ -239,6 +239,14 @@ const GRCockpit = (() => {
     const base = [...document.querySelectorAll("[data-gr-branch]")].map((b) => text(b).split(":").pop())[0] || "the base branch";
     const prUrl = location.pathname.replace(/\/$/, "");
     const mergebox = document.querySelector("[data-gr-mergebox]");
+    // Summary off: only the panel is drawn, from the conversations and comments. Every
+    // summary item comes from the draft state, the merge box or the reviewers section,
+    // so those three alone say whether the page was recognized. Skips the checks,
+    // approvals and labels reads (text walks and getComputedStyle) on every DOM change.
+    if (!SHOW_SUMMARY) {
+      const recognized = /^(draft|rascunho)$/.test(prState) || !!mergebox || !!sidebarSection("reviewers");
+      return { prState, recognized, threads: readThreads(viewer), comments: readComments(viewer) };
+    }
     const scopeText = text(mergebox);
     const items = [];
 
@@ -317,8 +325,8 @@ const GRCockpit = (() => {
       .map((a) => ({ name: text(a), color: getComputedStyle(a).backgroundColor })).filter((l) => l.name);
 
     return {
-      prState, items, people, labels: labelChips,
-      mergeActions: readMergeActions(mergebox).filter((t) => !/^resolve conflicts$/i.test(t) || !items.some((i) => /^Conflitos/.test(i.title))),
+      prState, recognized: items.length > 0, items, people, labels: labelChips,
+      mergeActions: readMergeActions(mergebox).filter((t) => !/^resolve conflicts$/i.test(t) || !items.some((i) => /^Conflicts with /.test(i.title))),
       hasMergebox: !!mergebox,
       threads, comments: readComments(viewer),
     };
@@ -580,6 +588,9 @@ const GRCockpit = (() => {
       moved = null;
     }
     document.getElementById("gr-modal")?.remove();
+    // For the CSS (page scroll lock, index hidden): `html:has(#gr-modal)` re-checked the
+    // whole page on every DOM change. content.js also recomputes it from the DOM.
+    document.documentElement.removeAttribute("data-gr-modal-open");
     // GitHub's comment box was in the modal footer: back to the Comments tab (or its place).
     if (hadComposer && lastModel) { panelSig = null; renderPanel(lastModel); }
     document.removeEventListener("keydown", onKey, true);
@@ -927,6 +938,7 @@ const GRCockpit = (() => {
         footer));
     if (native) modal.setAttribute("data-native", "");
     document.body.appendChild(modal);
+    document.documentElement.setAttribute("data-gr-modal-open", "");
     // Collapsed conversation in the new Overview: ask GitHub to expand it and refresh the copy.
     if (kind === "threads" && isNewThread(orig) && !orig.querySelector(".markdown-body")) {
       orig.querySelector("[data-dd-action-name='pull_requests.thread.expand'], [aria-label^='Open review comment']")?.click();
@@ -949,6 +961,23 @@ const GRCockpit = (() => {
   // container, in place of the sidebar. Re-placed if React re-renders.
   let placedOnce = false;
   function place() {
+    const ok = placeNodes();
+    syncPanelHost();
+    return ok;
+  }
+  // Stacked panel: its parent, and the parent's child holding the commits section,
+  // tagged for the CSS (instead of `:has(> #gr-panel[data-stacked])`, which made every
+  // element on the page re-check its children on each DOM change).
+  function syncPanelHost() {
+    const host = panel?.isConnected && panel.hasAttribute("data-stacked") ? panel.parentElement : null;
+    const mark = (attr, els) => {
+      for (const e of document.querySelectorAll(`[${attr}]`)) if (!els.includes(e)) e.removeAttribute(attr);
+      for (const e of els) if (!e.hasAttribute(attr)) e.setAttribute(attr, "");
+    };
+    mark("data-gr-panel-host", host ? [host] : []);
+    mark("data-gr-commits-block", host ? [...host.children].filter((c) => c.querySelector(":scope > section #overview-comments")) : []);
+  }
+  function placeNodes() {
     // The cockpit goes on top: before the merge box (new Overview, where it is above the
     // description) or before the description (classic tab, merge box at the end of the timeline).
     const box = document.querySelector("[data-gr-mergebox]"), desc = document.querySelector("[data-gr-desc]");
@@ -1056,6 +1085,7 @@ const GRCockpit = (() => {
     panelTab = "comments";
     el?.remove();
     panel?.remove();
+    syncPanelHost();
     closeModal();
     renderedSig = panelSig = null;
     for (const a of UI_ATTRS) root.removeAttribute(a);
@@ -1075,14 +1105,13 @@ const GRCockpit = (() => {
     hydrateCollapsed();
     const m = readPage(textNodes);
     // With nothing recognized on an open PR, we leave the page alone.
-    const usable = m.items.length > 0 || !/^(open|aberto|draft|rascunho)$/.test(m.prState);
+    const usable = m.recognized || !/^(open|aberto|draft|rascunho)$/.test(m.prState);
     root.toggleAttribute("data-gr-cockpit-ready", usable);
     if (!usable) { unmountDetails(); unmountComposer(); el.replaceChildren(); panel.replaceChildren(); renderedSig = panelSig = null; return; }
 
     const { threads, comments, ...main } = m;
-    const sig = JSON.stringify(main);
     // Summary off: the rare actions (draft, archive, close) live in the header's Actions menu (content.js).
-    if (SHOW_SUMMARY && sig !== renderedSig) { renderedSig = sig; render(m); }
+    if (SHOW_SUMMARY) { const sig = JSON.stringify(main); if (sig !== renderedSig) { renderedSig = sig; render(m); } }
     const psig = JSON.stringify({ threads, comments });
     // A conversation moved into the modal is not on the page: keep the panel as it was
     // until the modal closes (otherwise its card and count vanish meanwhile).
