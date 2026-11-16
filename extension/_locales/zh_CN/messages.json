@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine for GitHub"
+  },
+  "extDescription": {
+    "message": "更清爽的拉取请求页面：合并前还剩什么、侧边栏中的对话、紧凑的列表和检查。"
+  },
+  "popupEnabled": {
+    "message": "开启"
+  },
+  "popupDisabled": {
+    "message": "关闭"
+  },
+  "popupAccent": {
+    "message": "强调色"
+  },
+  "accentViolet": {
+    "message": "紫色"
+  },
+  "accentBlue": {
+    "message": "蓝色"
+  },
+  "accentGreen": {
+    "message": "绿色"
+  },
+  "accentOrange": {
+    "message": "橙色"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 个 PR"
+  },
+  "botsToggle": {
+    "message": "依赖更新 ($1)"
+  },
+  "draftsToggle": {
+    "message": "草稿 ($1)"
+  },
+  "copiedLink": {
+    "message": "链接已复制"
+  },
+  "toastUpdated": {
+    "message": "Refine 已更新至 $1"
+  },
+  "toastWhatsNew": {
+    "message": "新功能"
+  },
+  "panelConversations": {
+    "message": "对话"
+  },
+  "panelComments": {
+    "message": "评论"
+  },
+  "sizeBadgeTitle": {
+    "message": "新增 $1，删除 $2"
+  }
+}

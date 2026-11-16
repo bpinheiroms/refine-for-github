@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "GitHub용 Refine"
+  },
+  "extDescription": {
+    "message": "더 깔끔한 풀 리퀘스트 페이지: 머지까지 남은 것, 사이드 패널의 대화, 간결한 목록과 체크."
+  },
+  "popupEnabled": {
+    "message": "켜짐"
+  },
+  "popupDisabled": {
+    "message": "꺼짐"
+  },
+  "popupAccent": {
+    "message": "강조 색상"
+  },
+  "accentViolet": {
+    "message": "바이올렛"
+  },
+  "accentBlue": {
+    "message": "파랑"
+  },
+  "accentGreen": {
+    "message": "초록"
+  },
+  "accentOrange": {
+    "message": "주황"
+  },
+  "stackHeader": {
+    "message": "$1 · PR $2개"
+  },
+  "botsToggle": {
+    "message": "의존성 업데이트 ($1)"
+  },
+  "draftsToggle": {
+    "message": "초안 ($1)"
+  },
+  "copiedLink": {
+    "message": "링크 복사됨"
+  },
+  "toastUpdated": {
+    "message": "Refine이 $1(으)로 업데이트됨"
+  },
+  "toastWhatsNew": {
+    "message": "새로운 기능"
+  },
+  "panelConversations": {
+    "message": "대화"
+  },
+  "panelComments": {
+    "message": "댓글"
+  },
+  "sizeBadgeTitle": {
+    "message": "추가 $1, 삭제 $2"
+  }
+}

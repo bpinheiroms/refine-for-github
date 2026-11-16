@@ -1,0 +1,17 @@
+{
+  "name": "refine-for-github",
+  "private": true,
+  "version": "1.3.0",
+  "description": "Browser extension: a cleaner GitHub pull request page.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.js'",
+    "test:watch": "node --test --watch 'test/*.test.js'",
+    "check": "for f in extension/src/*.js extension/lib/*.js extension/popup/*.js; do node --check \"$f\"; done",
+    "lint": "npx --yes eslint@9.39.1 .",
+    "package": "./scripts/package.sh"
+  }
+}

@@ -17,16 +17,21 @@
   </header>
 
   <section class="accent">
-    <b>Accent color</b>
+    <b data-i18n="popupAccent">Accent color</b>
     <div class="swatches">
-      <button data-accent="violet" style="--c:#8b7cf6" title="Violet"></button>
-      <button data-accent="blue" style="--c:#5b9dff" title="Blue"></button>
-      <button data-accent="green" style="--c:#3ecf8e" title="Green"></button>
-      <button data-accent="orange" style="--c:#ff9a4d" title="Orange"></button>
+      <button data-accent="violet" style="--c:#8b7cf6" title="Violet" data-i18n-title="accentViolet"></button>
+      <button data-accent="blue" style="--c:#5b9dff" title="Blue" data-i18n-title="accentBlue"></button>
+      <button data-accent="green" style="--c:#3ecf8e" title="Green" data-i18n-title="accentGreen"></button>
+      <button data-accent="orange" style="--c:#ff9a4d" title="Orange" data-i18n-title="accentOrange"></button>
     </div>
   </section>
 
   <script src="../src/settings.js"></script>
+  <script src="../lib/i18n.js"></script>
+  <script src="../lib/deep-merge.js"></script>
+  <script src="../lib/settings-migrate.js"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="../lib/debounce.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

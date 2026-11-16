@@ -115,3 +115,14 @@ For the logged-in React UI, save the rendered DOM from the browser and pass the 
 - Licensed under the [MIT License](LICENSE).
 
 Refine for GitHub is an independent project and is not affiliated with, endorsed by or sponsored by GitHub, Inc.
+
+## Development
+
+```bash
+npm test        # unit tests for extension/lib (node:test, no install)
+npm run check   # syntax check of every script
+```
+
+- Logic that does not touch the page lives in `extension/lib/` — see [docs/architecture.md](docs/architecture.md).
+- Translations: [docs/i18n.md](docs/i18n.md). Shortcuts: [docs/shortcuts.md](docs/shortcuts.md).
+- Telemetry is opt-in and anonymous: [docs/telemetry.md](docs/telemetry.md).

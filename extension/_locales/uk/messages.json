@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine для GitHub"
+  },
+  "extDescription": {
+    "message": "Чистіша сторінка pull request: що лишилося до merge, обговорення в бічній панелі, компактні списки й перевірки."
+  },
+  "popupEnabled": {
+    "message": "Увімк"
+  },
+  "popupDisabled": {
+    "message": "Вимк"
+  },
+  "popupAccent": {
+    "message": "Акцентний колір"
+  },
+  "accentViolet": {
+    "message": "Фіолетовий"
+  },
+  "accentBlue": {
+    "message": "Синій"
+  },
+  "accentGreen": {
+    "message": "Зелений"
+  },
+  "accentOrange": {
+    "message": "Помаранчевий"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Оновлення залежностей ($1)"
+  },
+  "draftsToggle": {
+    "message": "Чернетки ($1)"
+  },
+  "copiedLink": {
+    "message": "Посилання скопійовано"
+  },
+  "toastUpdated": {
+    "message": "Refine оновлено до $1"
+  },
+  "toastWhatsNew": {
+    "message": "Що нового"
+  },
+  "panelConversations": {
+    "message": "Обговорення"
+  },
+  "panelComments": {
+    "message": "Коментарі"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 додавань, $2 видалень"
+  }
+}

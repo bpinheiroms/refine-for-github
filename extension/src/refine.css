@@ -1456,3 +1456,43 @@ html[data-gr-accent] .gr-queue-group {
 }
 html[data-gr-accent] .gr-queue-group:first-child { padding-top: 8px; }
 html[data-gr-accent] .gr-queue-n { padding: 0 6px; border-radius: 999px; background: var(--bgColor-neutral-muted, #262c36); font-variant-numeric: tabular-nums; font-weight: 500; }
+
+/* ---------- 1.3.0: size badge, update toast, stack title ---------- */
+.gr-size {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 6px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 600 11px/18px var(--fontStack-monospace, ui-monospace, monospace);
+  color: var(--fgColor-muted);
+  background: var(--bgColor-neutral-muted);
+}
+.gr-size[data-size="xs"], .gr-size[data-size="s"] { color: var(--fgColor-success); }
+.gr-size[data-size="l"] { color: var(--fgColor-attention); }
+.gr-size[data-size="xl"] { color: var(--fgColor-danger); }
+
+#gr-toast {
+  position: fixed;
+  inset-block-end: 16px;
+  inset-inline-end: 16px;
+  z-index: 2147483647;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px solid var(--borderColor-default);
+  border-radius: 12px;
+  background: var(--bgColor-default);
+  box-shadow: var(--shadow-floating-large);
+  font-size: 13px;
+}
+#gr-toast button { border: 0; background: none; color: var(--fgColor-muted); cursor: pointer; font-size: 16px; }
+
+.gr-stack-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40ch;
+  color: var(--fgColor-muted);
+}

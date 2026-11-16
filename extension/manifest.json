@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Refine for GitHub",
+  "name": "__MSG_extName__",
   "short_name": "Refine",
-  "version": "1.2.0",
-  "description": "A cleaner GitHub pull request page: what's left to merge, conversations in a side panel, compact lists and checks.",
+  "version": "1.3.0",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon-16.png",
@@ -11,13 +12,48 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["storage"],
-  "host_permissions": ["https://github.com/*"],
+  "permissions": [
+    "storage",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "https://github.com/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://github.com/*"],
-      "css": ["src/refine.css"],
-      "js": ["src/settings.js", "src/cockpit.js", "src/content.js"],
+      "matches": [
+        "https://github.com/*"
+      ],
+      "css": [
+        "src/refine.css"
+      ],
+      "js": [
+        "src/settings.js",
+        "lib/escape.js",
+        "lib/pluralize.js",
+        "lib/truncate.js",
+        "lib/semver.js",
+        "lib/debounce.js",
+        "lib/logger.js",
+        "lib/feature-flags.js",
+        "lib/telemetry.js",
+        "lib/ticket.js",
+        "lib/branch.js",
+        "lib/pr-url.js",
+        "lib/i18n.js",
+        "lib/clipboard.js",
+        "lib/diffstat.js",
+        "lib/size-badge.js",
+        "lib/shortcuts.js",
+        "lib/toast.js",
+        "lib/checks.js",
+        "lib/reviews.js",
+        "lib/dom.js",
+        "lib/slug.js",
+        "lib/markdown-toc.js",
+        "src/cockpit.js",
+        "src/content.js"
+      ],
       "run_at": "document_start"
     }
   ],

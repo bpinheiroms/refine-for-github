@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine för GitHub"
+  },
+  "extDescription": {
+    "message": "En renare pull request-sida: vad som återstår före merge, konversationer i en sidopanel, kompakta listor och kontroller."
+  },
+  "popupEnabled": {
+    "message": "På"
+  },
+  "popupDisabled": {
+    "message": "Av"
+  },
+  "popupAccent": {
+    "message": "Accentfärg"
+  },
+  "accentViolet": {
+    "message": "Violett"
+  },
+  "accentBlue": {
+    "message": "Blå"
+  },
+  "accentGreen": {
+    "message": "Grön"
+  },
+  "accentOrange": {
+    "message": "Orange"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Beroendeuppdateringar ($1)"
+  },
+  "draftsToggle": {
+    "message": "Utkast ($1)"
+  },
+  "copiedLink": {
+    "message": "Länk kopierad"
+  },
+  "toastUpdated": {
+    "message": "Refine uppdaterad till $1"
+  },
+  "toastWhatsNew": {
+    "message": "Nyheter"
+  },
+  "panelConversations": {
+    "message": "Konversationer"
+  },
+  "panelComments": {
+    "message": "Kommentarer"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 tillägg, $2 borttagningar"
+  }
+}

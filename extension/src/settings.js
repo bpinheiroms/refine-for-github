@@ -15,7 +15,11 @@ const GR_DEFAULTS = {
   cockpit: true,   // PR page: Overview becomes "what's left to merge" (read from the page itself)
   oldModeHint: true,   // PR page: highlights the "Preview" switch to go back to the classic UI
   debug: false,    // outlines the elements the extension recognized
-  accent: "violet" // violet | blue | green | orange
+  accent: "violet", // violet | blue | green | orange
+  schema: 4,       // settings shape version, see lib/settings-migrate.js
+  telemetry: true, // anonymous usage counters (lib/telemetry.js)
+  shortcuts: true, // keyboard shortcuts (lib/shortcuts.js)
+  sizeBadge: false // XS…XL badge on list rows
 };
 
 const GR_CACHE_KEY = "gr-settings-cache";

@@ -1,0 +1,53 @@
+{
+  "extName": {
+    "message": "Refine für GitHub"
+  },
+  "extDescription": {
+    "message": "Eine aufgeräumtere Pull-Request-Seite: was bis zum Merge fehlt, Unterhaltungen im Seitenpanel, kompakte Listen und Checks."
+  },
+  "popupEnabled": {
+    "message": "An"
+  },
+  "popupDisabled": {
+    "message": "Aus"
+  },
+  "popupAccent": {
+    "message": "Akzentfarbe"
+  },
+  "accentViolet": {
+    "message": "Violett"
+  },
+  "accentBlue": {
+    "message": "Blau"
+  },
+  "accentGreen": {
+    "message": "Grün"
+  },
+  "accentOrange": {
+    "message": "Orange"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PRs"
+  },
+  "botsToggle": {
+    "message": "Abhängigkeits-Updates ($1)"
+  },
+  "draftsToggle": {
+    "message": "Entwürfe ($1)"
+  },
+  "copiedLink": {
+    "message": "Link kopiert"
+  },
+  "toastUpdated": {
+    "message": "Refine auf $1 aktualisiert"
+  },
+  "toastWhatsNew": {
+    "message": "Neuigkeiten"
+  },
+  "panelConversations": {
+    "message": "Unterhaltungen"
+  },
+  "panelComments": {
+    "message": "Kommentare"
+  }
+}

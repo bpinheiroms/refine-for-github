@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine voor GitHub"
+  },
+  "extDescription": {
+    "message": "Een overzichtelijkere pull request-pagina: wat er nog moet vóór de merge, gesprekken in een zijpaneel, compacte lijsten."
+  },
+  "popupEnabled": {
+    "message": "Aan"
+  },
+  "popupDisabled": {
+    "message": "Uit"
+  },
+  "popupAccent": {
+    "message": "Accentkleur"
+  },
+  "accentViolet": {
+    "message": "Violet"
+  },
+  "accentBlue": {
+    "message": "Blauw"
+  },
+  "accentGreen": {
+    "message": "Groen"
+  },
+  "accentOrange": {
+    "message": "Oranje"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR's"
+  },
+  "botsToggle": {
+    "message": "Afhankelijkheidsupdates ($1)"
+  },
+  "draftsToggle": {
+    "message": "Concepten ($1)"
+  },
+  "copiedLink": {
+    "message": "Link gekopieerd"
+  },
+  "toastUpdated": {
+    "message": "Refine bijgewerkt naar $1"
+  },
+  "toastWhatsNew": {
+    "message": "Wat is er nieuw"
+  },
+  "panelConversations": {
+    "message": "Gesprekken"
+  },
+  "panelComments": {
+    "message": "Reacties"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 toevoegingen, $2 verwijderingen"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "extName": {
+    "message": "Refine for GitHub",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "A cleaner GitHub pull request page: what's left to merge, conversations in a side panel, compact lists and checks.",
+    "description": "Store description (max 132 chars)"
+  },
+  "popupEnabled": {
+    "message": "On",
+    "description": "Popup: master switch on"
+  },
+  "popupDisabled": {
+    "message": "Off",
+    "description": "Popup: master switch off"
+  },
+  "popupAccent": {
+    "message": "Accent",
+    "description": "Popup: accent color picker label"
+  },
+  "accentViolet": {
+    "message": "Violet",
+    "description": "Accent name"
+  },
+  "accentBlue": {
+    "message": "Blue",
+    "description": "Accent name"
+  },
+  "accentGreen": {
+    "message": "Green",
+    "description": "Accent name"
+  },
+  "accentOrange": {
+    "message": "Orange",
+    "description": "Accent name"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PRs",
+    "description": "List: header of a group of stacked PRs. $1 = ticket or stack name, $2 = number of PRs"
+  },
+  "botsToggle": {
+    "message": "Dependency updates ($1)",
+    "description": "List: button showing the dependency PRs. $1 = count"
+  },
+  "draftsToggle": {
+    "message": "Drafts ($1)",
+    "description": "List: button showing drafts. $1 = count"
+  },
+  "copiedLink": {
+    "message": "Link copied",
+    "description": "Feedback after copying the PR link"
+  },
+  "toastUpdated": {
+    "message": "Refine updated to $1",
+    "description": "Toast after update. $1 = version"
+  },
+  "toastWhatsNew": {
+    "message": "What's new",
+    "description": "Link in the update toast"
+  },
+  "panelConversations": {
+    "message": "Conversations",
+    "description": "Side panel heading"
+  },
+  "panelComments": {
+    "message": "Comments",
+    "description": "Side panel heading"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 additions, $2 deletions",
+    "description": "Tooltip of the size badge. $1 = additions, $2 = deletions"
+  }
+}

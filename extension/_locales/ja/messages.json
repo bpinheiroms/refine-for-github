@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine for GitHub"
+  },
+  "extDescription": {
+    "message": "すっきりしたプルリクエストページ：マージまでの残り、サイドパネルの会話、コンパクトなリストとチェック。"
+  },
+  "popupEnabled": {
+    "message": "オン"
+  },
+  "popupDisabled": {
+    "message": "オフ"
+  },
+  "popupAccent": {
+    "message": "アクセントカラー"
+  },
+  "accentViolet": {
+    "message": "バイオレット"
+  },
+  "accentBlue": {
+    "message": "ブルー"
+  },
+  "accentGreen": {
+    "message": "グリーン"
+  },
+  "accentOrange": {
+    "message": "オレンジ"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 件の PR"
+  },
+  "botsToggle": {
+    "message": "依存関係の更新 ($1)"
+  },
+  "draftsToggle": {
+    "message": "下書き ($2)"
+  },
+  "copiedLink": {
+    "message": "リンクをコピーしました"
+  },
+  "toastUpdated": {
+    "message": "Refine を $1 に更新しました"
+  },
+  "toastWhatsNew": {
+    "message": "新機能"
+  },
+  "panelConversations": {
+    "message": "会話"
+  },
+  "panelComments": {
+    "message": "コメント"
+  },
+  "sizeBadgeTitle": {
+    "message": "追加 $1、削除 $2"
+  }
+}

@@ -33,15 +33,19 @@ jobs:
             if (!/^\d+\.\d+\.\d+$/.test(m.version)) fail("version must be x.y.z");
             if (m.description.length > 132) fail("description over 132 chars");
             const perms = JSON.stringify(m.permissions);
-            if (perms !== "[\"storage\"]") fail("unexpected permissions: " + perms);
+            if (perms !== "[\"storage\",\"clipboardWrite\"]") fail("unexpected permissions: " + perms);
             const hosts = JSON.stringify(m.host_permissions);
             if (hosts !== "[\"https://github.com/*\"]") fail("unexpected host permissions: " + hosts);
           '
       - name: Scripts parse
-        run: for f in extension/src/*.js extension/popup/*.js; do node --check "$f"; done
+        run: for f in extension/src/*.js extension/lib/*.js extension/popup/*.js; do node --check "$f"; done
+      - name: Unit tests
+        run: node --test 'test/*.test.js'
+      - name: Locales are valid JSON
+        run: for f in extension/_locales/*/messages.json; do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))"; done
       - name: No remote code
         run: |
-          if grep -nE '(eval\(|new Function\(|importScripts\(|<script[^>]+src=["'"'"']https?:)' extension/src/*.js extension/popup/*; then
+          if grep -nE '(eval\(|new Function\(|importScripts\(|<script[^>]+src=["'"'"']https?:)' extension/src/*.js extension/lib/*.js extension/popup/*; then
             echo "remote or dynamic code found"; exit 1
           fi
       - name: Package

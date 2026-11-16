@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine для GitHub"
+  },
+  "extDescription": {
+    "message": "Более чистая страница pull request: что осталось до merge, обсуждения в боковой панели, компактные списки и проверки."
+  },
+  "popupEnabled": {
+    "message": "Вкл"
+  },
+  "popupDisabled": {
+    "message": "Выкл"
+  },
+  "popupAccent": {
+    "message": "Акцентный цвет"
+  },
+  "accentViolet": {
+    "message": "Фиолетовый"
+  },
+  "accentBlue": {
+    "message": "Синий"
+  },
+  "accentGreen": {
+    "message": "Зелёный"
+  },
+  "accentOrange": {
+    "message": "Оранжевый"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Обновления зависимостей ($1)"
+  },
+  "draftsToggle": {
+    "message": "Черновики ($1)"
+  },
+  "copiedLink": {
+    "message": "Ссылка скопирована"
+  },
+  "toastUpdated": {
+    "message": "Refine обновлён до $1"
+  },
+  "toastWhatsNew": {
+    "message": "Что нового"
+  },
+  "panelConversations": {
+    "message": "Обсуждения"
+  },
+  "panelComments": {
+    "message": "Комментарии"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 добавлений, $2 удалений"
+  }
+}

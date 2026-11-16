@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine pro GitHub"
+  },
+  "extDescription": {
+    "message": "Přehlednější stránka pull requestu: co zbývá do merge, konverzace v bočním panelu, kompaktní seznamy a kontroly."
+  },
+  "popupEnabled": {
+    "message": "Zapnuto"
+  },
+  "popupDisabled": {
+    "message": "Vypnuto"
+  },
+  "popupAccent": {
+    "message": "Barva zvýraznění"
+  },
+  "accentViolet": {
+    "message": "Fialová"
+  },
+  "accentBlue": {
+    "message": "Modrá"
+  },
+  "accentGreen": {
+    "message": "Zelená"
+  },
+  "accentOrange": {
+    "message": "Oranžová"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Aktualizace závislostí ($1)"
+  },
+  "draftsToggle": {
+    "message": "Koncepty ($1)"
+  },
+  "copiedLink": {
+    "message": "Odkaz zkopírován"
+  },
+  "toastUpdated": {
+    "message": "Refine aktualizován na $1"
+  },
+  "toastWhatsNew": {
+    "message": "Novinky"
+  },
+  "panelConversations": {
+    "message": "Konverzace"
+  },
+  "panelComments": {
+    "message": "Komentáře"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 přidání, $2 odebrání"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "GitHub için Refine"
+  },
+  "extDescription": {
+    "message": "Daha sade bir pull request sayfası: merge için kalanlar, yan panelde konuşmalar, kompakt listeler ve kontroller."
+  },
+  "popupEnabled": {
+    "message": "Açık"
+  },
+  "popupDisabled": {
+    "message": "Kapalı"
+  },
+  "popupAccent": {
+    "message": "Vurgu rengi"
+  },
+  "accentViolet": {
+    "message": "Mor"
+  },
+  "accentBlue": {
+    "message": "Mavi"
+  },
+  "accentGreen": {
+    "message": "Yeşil"
+  },
+  "accentOrange": {
+    "message": "Turuncu"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Bağımlılık güncellemeleri ($1)"
+  },
+  "draftsToggle": {
+    "message": "Taslaklar ($1)"
+  },
+  "copiedLink": {
+    "message": "Bağlantı kopyalandı"
+  },
+  "toastUpdated": {
+    "message": "Refine $1 sürümüne güncellendi"
+  },
+  "toastWhatsNew": {
+    "message": "Yenilikler"
+  },
+  "panelConversations": {
+    "message": "Konuşmalar"
+  },
+  "panelComments": {
+    "message": "Yorumlar"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 ekleme, $2 silme"
+  }
+}

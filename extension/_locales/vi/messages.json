@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine cho GitHub"
+  },
+  "extDescription": {
+    "message": "Trang pull request gọn gàng hơn: những gì còn lại trước khi merge, hội thoại ở bảng bên, danh sách và kiểm tra gọn."
+  },
+  "popupEnabled": {
+    "message": "Bật"
+  },
+  "popupDisabled": {
+    "message": "Tắt"
+  },
+  "popupAccent": {
+    "message": "Màu nhấn"
+  },
+  "accentViolet": {
+    "message": "Tím"
+  },
+  "accentBlue": {
+    "message": "Xanh dương"
+  },
+  "accentGreen": {
+    "message": "Xanh lá"
+  },
+  "accentOrange": {
+    "message": "Cam"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Cập nhật phụ thuộc ($1)"
+  },
+  "draftsToggle": {
+    "message": "Bản nháp ($1)"
+  },
+  "copiedLink": {
+    "message": "Đã sao chép liên kết"
+  },
+  "toastUpdated": {
+    "message": "Refine đã cập nhật lên $1"
+  },
+  "toastWhatsNew": {
+    "message": "Có gì mới"
+  },
+  "panelConversations": {
+    "message": "Hội thoại"
+  },
+  "panelComments": {
+    "message": "Bình luận"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 dòng thêm, $2 dòng xóa"
+  }
+}

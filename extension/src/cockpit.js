@@ -36,7 +36,7 @@ const GRCockpit = (() => {
   const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
   const text = (node) => clean(node?.textContent);
   const plural = (n, one, many) => (n === 1 ? one : many);
-  const names = (list) => list.length <= 2 ? list.join(" and ") : `${list.slice(0, -1).join(", ")} and ${list.at(-1)}`;
+  const names = (list) => globalThis.GRLib.pluralize.list(list);
   const displayName = (login) => ({ "copilot-pull-request-reviewer": "Copilot", "github-actions": "GitHub Actions" })[login] || login.replace(/\[bot\]$/, "");
   const cut = (s, n) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 

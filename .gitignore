@@ -3,3 +3,5 @@ dist/
 # Test bench: saved GitHub pages (may contain content from private repositories)
 prototype/real/*/
 prototype/real/__ext
+node_modules/
+coverage/

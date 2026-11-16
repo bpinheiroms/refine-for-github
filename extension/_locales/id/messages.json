@@ -1,0 +1,56 @@
+{
+  "extName": {
+    "message": "Refine untuk GitHub"
+  },
+  "extDescription": {
+    "message": "Halaman pull request yang lebih bersih: apa yang tersisa sebelum merge, percakapan di panel samping, daftar dan pemeriksaan yang ringkas dan rapi."
+  },
+  "popupEnabled": {
+    "message": "Aktif"
+  },
+  "popupDisabled": {
+    "message": "Nonaktif"
+  },
+  "popupAccent": {
+    "message": "Warna aksen"
+  },
+  "accentViolet": {
+    "message": "Ungu"
+  },
+  "accentBlue": {
+    "message": "Biru"
+  },
+  "accentGreen": {
+    "message": "Hijau"
+  },
+  "accentOrange": {
+    "message": "Oranye"
+  },
+  "stackHeader": {
+    "message": "$1 · $2 PR"
+  },
+  "botsToggle": {
+    "message": "Pembaruan dependensi ($1)"
+  },
+  "draftsToggle": {
+    "message": "Draf ($1)"
+  },
+  "copiedLink": {
+    "message": "Tautan disalin"
+  },
+  "toastUpdated": {
+    "message": "Refine diperbarui ke $1"
+  },
+  "toastWhatsNew": {
+    "message": "Yang baru"
+  },
+  "panelConversations": {
+    "message": "Percakapan"
+  },
+  "panelComments": {
+    "message": "Komentar"
+  },
+  "sizeBadgeTitle": {
+    "message": "$1 penambahan, $2 penghapusan"
+  }
+}
