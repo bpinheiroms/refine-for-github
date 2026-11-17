@@ -26,19 +26,57 @@
   const root = document.documentElement;
   let settings = { ...GR_DEFAULTS };
 
+  // Repository code pages (the repo home, the file list, a file, blame) are the
+  // largest DOM GitHub has, and the code view mutates on every scroll. They have
+  // no PR list and no pull-request layout, so tag() has nothing to do there.
+  // GitHub's own top-level routes, never an owner: /pulls/review-requested and
+  // /issues/assigned have two segments like a repository home, but they are lists.
+  const RESERVED_ROOT = /^(pulls|issues|settings|notifications|explore|topics|collections|trending|features|login|signup|marketplace|sponsors|orgs|organizations|users|stars|watching|search|dashboard|new|codespaces|copilot|account|apps|enterprise)$/;
+  function isRepoCodePage(path = location.pathname) {
+    if (location.hostname !== "github.com") return false;
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length < 2 || RESERVED_ROOT.test(parts[0])) return false;
+    return parts.length === 2 || /^(tree|blob|blame)$/.test(parts[2]);
+  }
+  // Any pull request tab (Overview, Files changed, Commits, Checks).
+  const onPullRoute = () => /\/pull\/\d+/.test(location.pathname) || root.hasAttribute("data-gr-mock-pull");
+
   // ---------- SPA navigation ----------
   // GitHub changes pages without reloading (Turbo + React). One MutationObserver
-  // throttled per frame covers everything: navigation, filters, pagination, lazy load.
+  // throttled per frame covers navigation, filters, pagination, lazy load.
+  // On a repository code page the callback returns without scheduling work:
+  // the file tree mutates constantly, and a full tag() there is wasted.
   let pending = false;
+  let repoSettled = null;
+  function onRoute() {
+    const repo = isRepoCodePage();
+    if (repo === repoSettled) return;
+    repoSettled = repo;
+    if (repo) settleRepo();
+    else scheduleTag();
+  }
   function scheduleTag() {
+    // A repository code page needs one settle pass, then nothing until the route changes.
+    if (isRepoCodePage()) { if (repoSettled === true) return; }
+    else repoSettled = false;
     if (pending) return;
     pending = true;
+    // The frame decides from the route at that moment (it may have changed since):
+    // tag() hands repository code pages to onRoute(). Deferred also because this can
+    // run while the script is still starting, before later `let` bindings exist.
     requestAnimationFrame(() => { pending = false; tag(); });
   }
 
+  let watching = false;
   const observer = new MutationObserver(scheduleTag);
+  function unobserve() {
+    observer.disconnect();
+    watching = false;
+  }
   function observe() {
+    if (watching) return;
     observer.observe(document.documentElement, { childList: true, subtree: true });
+    watching = true;
   }
   // ---------- 1. Settings ----------
 
@@ -108,7 +146,7 @@
     if (/\/(issues|pull)\/\d+/.test(location.pathname)) {
       for (const el of document.querySelectorAll("[data-gr-row], [data-gr-title], [data-gr-list]")) {
         if (el.closest("#gr-panel, #gr-cockpit, #gr-modal")) continue;
-        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft", "data-gr-queued", ...STACK_ATTRS]) el.removeAttribute(a);
+        for (const a of ["data-gr-row", "data-gr-title", "data-gr-list", "data-gr-state", "data-gr-bot", "data-gr-draft", "data-gr-queued", ...LIST_HAS, ...STACK_ATTRS]) el.removeAttribute(a);
         el.style?.removeProperty("--gr-ord");
       }
       document.querySelectorAll("main .gr-bot-toggle, main .gr-stack-head").forEach((t) => t.remove());
@@ -166,6 +204,8 @@
   // + same ticket (SPRK-123) in the title; without a ticket there is no group. Two
   // stacks must never be merged into one, so a group where a position repeats
   // (two "1/3") is left alone too.
+  // A list holding a group toggle (CSS hides the grouped rows until it is opened).
+  const LIST_HAS = ["data-gr-has-bots", "data-gr-has-drafts", "data-gr-has-queued"];
   const STACK_ATTRS = ["data-gr-stack", "data-gr-stack-pos", "data-gr-stack-total", "data-gr-stack-id", "data-gr-stack-author", "data-gr-stack-closed", "data-gr-stack-last"];
   // "Stack #19177" or a /stacks/19177 link. Not "Pull request stack, position 3 of 3".
   const STACK_ID = /\/stacks\/(\d+)|\bstack\s*#\s*(\d+)/i;
@@ -310,6 +350,7 @@
   function ensureBotToggle(list) {
     const bots = list.querySelectorAll(":scope > [data-gr-bot]").length;
     let toggle = list.querySelector(":scope > .gr-bot-toggle:not(.gr-draft-toggle):not(.gr-queue-toggle)");
+    list.toggleAttribute("data-gr-has-bots", bots >= 2);
     if (bots < 2) { toggle?.remove(); return; }
 
     if (!toggle) {
@@ -343,6 +384,7 @@
   function ensureQueueToggle(list) {
     const n = list.querySelectorAll(":scope > [data-gr-queued]").length;
     let toggle = list.querySelector(":scope > .gr-queue-toggle");
+    list.toggleAttribute("data-gr-has-queued", n >= 2);
     if (n < 2) { toggle?.remove(); return; }
     if (!toggle) {
       toggle = document.createElement("button");
@@ -368,6 +410,7 @@
   function ensureDraftToggle(list) {
     const n = list.querySelectorAll(":scope > [data-gr-draft]").length;
     let toggle = list.querySelector(":scope > .gr-draft-toggle");
+    list.toggleAttribute("data-gr-has-drafts", n >= 2);
     if (n < 2) { toggle?.remove(); return; }
     if (!toggle) {
       toggle = document.createElement("button");
@@ -403,13 +446,21 @@
   // Text nodes whose content (without whitespace) matches `re`, outside markdown.
   // Going by text rather than tag works on both the old page (Rails:
   // <h3>, <summary>) and the new one (React: <span> inside buttons, etc.).
+  // With several patterns, one walk returns one list per pattern.
+  const TEXT_SKIP = ".markdown-body, #gr-toc, #gr-cockpit, #gr-panel, #gr-modal, script, style, [hidden]";
   function textNodes(scope, re) {
-    const found = [];
-    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
-      acceptNode: (n) => re.test(n.nodeValue.trim()) && !n.parentElement.closest(".markdown-body, #gr-toc, #gr-cockpit, #gr-panel, #gr-modal, script, style, [hidden]")
-        ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP,
-    });
-    while (walker.nextNode()) found.push(walker.currentNode);
+    return scanText(scope, [re])[0];
+  }
+  function scanText(scope, res) {
+    const found = res.map(() => []);
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+    for (let n; (n = walker.nextNode());) {
+      const t = n.nodeValue.trim();
+      let hit = -1;
+      for (let i = 0; i < res.length; i++) if (res[i].test(t)) { hit = i; break; }
+      if (hit < 0 || n.parentElement.closest(TEXT_SKIP)) continue;
+      for (let i = hit; i < res.length; i++) if (i === hit || res[i].test(t)) found[i].push(n);
+    }
     return found;
   }
 
@@ -419,8 +470,14 @@
     const all = [...document.querySelectorAll("main h1, .gh-header-title, h1[data-component='Heading']")]
       .filter((h) => !h.closest("#gr-toc"));
     if (all.length < 2) return all[0] || null;
+    // Usually only one of them is rendered: no need to measure (a measurement during
+    // page load forces a full layout of the half-parsed page).
+    const shown = all.filter(rendered);
+    if (shown.length === 1) return shown[0];
     return all.reduce((a, b) => (b.getBoundingClientRect().height > a.getBoundingClientRect().height ? b : a));
   }
+  // Has a box (same answer as getClientRects().length > 0), from style alone: no layout.
+  const rendered = (el) => el.checkVisibility();
 
   function tagPrHeader() {
     const h1 = findTitle();
@@ -478,7 +535,30 @@
       section.setAttribute("data-gr-sb", head.textContent.trim().toLowerCase());
       section.toggleAttribute("data-gr-empty", SIDEBAR_EMPTY.test(section.textContent));
     }
+    // Inside empty sections: text leaves (muted) and icon-only buttons (shown on hover).
+    // Tagged here rather than matched with :has() in CSS, which made every <span>
+    // and <button> on any GitHub page re-check its children on each DOM change.
+    const leaves = [], iconBtns = [];
+    for (const section of document.querySelectorAll("[data-gr-sb][data-gr-empty]")) {
+      for (const el of section.querySelectorAll("p, span, a")) if (!el.firstElementChild) leaves.push(el);
+      for (const b of section.querySelectorAll("button")) {
+        if (b.querySelector("svg") && ![...b.querySelectorAll("span")].some(hasContent)) iconBtns.push(b);
+      }
+    }
+    markSet("data-gr-leaf", leaves);
+    markSet("data-gr-icon-btn", iconBtns);
   }
+  // CSS :empty: no element and no text child (comments do not count).
+  const hasContent = (el) => [...el.childNodes].some((n) => n.nodeType === 1 || n.nodeType === 3);
+
+  // Exactly `els` carry `attr`. Writes only what changed: each write restyles the element.
+  function markSet(attr, els) {
+    const want = new Set(els);
+    for (const el of document.querySelectorAll(`[${attr}]`)) if (!want.has(el)) el.removeAttribute(attr);
+    for (const el of want) if (!el.hasAttribute(attr)) el.setAttribute(attr, "");
+  }
+  // CSS `:has(> sel)`: the parents of `sel`, tagged with `attr`.
+  const markParents = (attr, sel) => markSet(attr, [...document.querySelectorAll(sel)].map((el) => el.parentElement).filter(Boolean));
 
   // PR number next to the title. On the new page it only appears in the sticky
   // header. If the title already shows a visible "#123", we just style it; otherwise,
@@ -493,7 +573,7 @@
     const area = h1.parentElement || h1;
     // The text may be split across nodes ("#", "104"), so we compare the element's textContent.
     const visible = [...area.querySelectorAll("span, a, em")].find((el) =>
-      /^#\s*\d+$/.test(el.textContent.trim()) && !el.closest(".sr-only, .gr-pr-num, [class*='VisuallyHidden']") && el.getClientRects().length > 0);
+      /^#\s*\d+$/.test(el.textContent.trim()) && !el.closest(".sr-only, .gr-pr-num, [class*='VisuallyHidden']") && rendered(el));
     if (visible) { ours?.remove(); visible.setAttribute("data-gr-pr-num", ""); return; }
     if (ours) return;
 
@@ -620,7 +700,9 @@
     root.toggleAttribute("data-gr-actions-inline", active && !p.barActs);
     // All PR tabs use the full width (Files changed pattern): no centered 1356px box.
     root.toggleAttribute("data-gr-fullpage", active);
-    root.toggleAttribute("data-gr-pr-done", /^(merged|closed|mesclado|fechado)$/i.test(document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || ""));
+    // Off a pull request it is always cleared (right after a soft navigation the old
+    // PR's state pill can still be in the page).
+    root.toggleAttribute("data-gr-pr-done", onPullRoute() && /^(merged|closed|mesclado|fechado)$/i.test(document.querySelector("[data-gr-pr-state]")?.getAttribute("data-gr-pr-state") || ""));
     // The sticky bar only appears after the title scrolls off screen (it takes no space:
     // it overlays the content). Until then, its buttons move down to the title row.
     const wide = innerWidth >= 768;
@@ -642,12 +724,12 @@
     const phEl = title?.closest('[class*="prc-PageHeader-PageHeader-"]');
     if (phEl && wide) {
       const r = phEl.getBoundingClientRect();
-      root.style.setProperty("--gr-pad-l", `${Math.max(0, Math.round(r.left - 8))}px`);
-      root.style.setProperty("--gr-pad-r", `${Math.max(0, Math.round(document.documentElement.clientWidth - r.right))}px`);
+      setVar("--gr-pad-l", `${Math.max(0, Math.round(r.left - 8))}px`);
+      setVar("--gr-pad-r", `${Math.max(0, Math.round(document.documentElement.clientWidth - r.right))}px`);
     }
     if (p.barActs) p.barActs.style.transform = "";
     if (one && wide) {
-      const t = title.getBoundingClientRect(), a = p.barActs.getBoundingClientRect();
+      const a = p.barActs.getBoundingClientRect();
       const line = title.querySelector("h1, h2") || title;
       const l = line.getBoundingClientRect();
       // Horizontal: the buttons' right edge follows the header's right edge
@@ -655,7 +737,7 @@
       const ph = title.closest('[class*="prc-PageHeader-PageHeader-"]') || title;
       const dx = Math.round(ph.getBoundingClientRect().right - a.right);
       p.barActs.style.transform = `translate(${dx}px, ${Math.round(l.top + Math.min(l.height, 32) / 2 - (a.top + a.height / 2))}px)`;
-      root.style.setProperty("--gr-bar-acts-w", `${Math.round(a.width + 16)}px`);
+      setVar("--gr-bar-acts-w", `${Math.round(a.width + 16)}px`);
     }
     // GitHub's originals: invisible, beneath our button.
     if (p.acts) {
@@ -664,7 +746,14 @@
       p.acts.style.transform = `translate(${Math.round(b.right - a.right)}px, ${Math.round(b.top + b.height / 2 - (a.top + a.height / 2))}px)`;
     }
   }
-  const queueHeader = () => { if (!headerRaf) headerRaf = requestAnimationFrame(syncHeader); };
+  // Writes a custom property on <html> only when it changes (each write restyles the page).
+  const setVar = (name, value) => { if (root.style.getPropertyValue(name) !== value) root.style.setProperty(name, value); };
+  // Only pull request pages have this header. Elsewhere one pass clears what a pull
+  // request left behind (soft navigation), then scrolling costs nothing.
+  const queueHeader = () => {
+    if (!onPullRoute() && !["data-gr-actions-menu", "data-gr-one-header", "data-gr-pr-done"].some((a) => root.hasAttribute(a))) return;
+    if (!headerRaf) headerRaf = requestAnimationFrame(syncHeader);
+  };
   addEventListener("scroll", queueHeader, { passive: true });
   addEventListener("resize", queueHeader);
 
@@ -710,8 +799,8 @@
   // Merge box on the new Overview ("Some checks are waiting…" + Checks |
   // Comments | Approvals). From the "Approvals" text, walk up to the largest block that
   // does not yet contain the description.
-  function tagMergeBox(scope) {
-    const node = textNodes(scope, STATUS_TEXT).find((n) => !n.parentElement.closest("nav, [role='tablist'], #gr-cockpit"));
+  function tagMergeBox(scope, statusNodes) {
+    const node = statusNodes.find((n) => !n.parentElement.closest("nav, [role='tablist'], #gr-cockpit"));
     const body = descBody();
     let el = node?.parentElement;
     // Classic page (Conversation tab): the merge box has a fixed id / test id, at the end
@@ -743,8 +832,8 @@
 
   // GitHub's "Preview ▾" selector (toggles the new UI): we highlight it
   // for anyone who wants to go back to the old one.
-  function tagPreviewToggle() {
-    const node = textNodes(document.querySelector("main") || document.body, PREVIEW_TEXT)
+  function tagPreviewToggle(previewNodes) {
+    const node = previewNodes
       // Not the Write | Preview tab of a comment box (classic Conversation tab).
       .find((n) => n.parentElement.closest("button, summary, [role='button']") && !n.parentElement.closest("form, [role='tablist'], [role='tab'], .js-previewable-comment-form"));
     const btn = node?.parentElement.closest("button, summary, [role='button']");
@@ -816,9 +905,14 @@
     const scope = document.querySelector('[class*="prc-PageLayout-HeaderContent"], [data-gr-pr-header]');
     let net = document.querySelector(".gr-net");
     // Leaf elements with "+52" and "−6" (text may be split across nodes, so we use textContent).
-    const leaves = scope ? [...scope.querySelectorAll("span, strong, div, a")].filter((e) => !e.closest(".gr-net, .sr-only, [class*='VisuallyHidden']") && e.getClientRects().length && ![...e.children].some((c) => c.textContent.trim())) : [];
-    const plusEl = leaves.find((e) => /^\+\s*[\d,]+$/.test(e.textContent.trim()));
-    const minusEl = leaves.find((e) => /^[-−–]\s*[\d,]+$/.test(e.textContent.trim()));
+    // The text test comes first: visibility is only asked of the few that match.
+    const PLUS = /^\+\s*[\d,]+$/, MINUS = /^[-−–]\s*[\d,]+$/;
+    const leaves = scope ? [...scope.querySelectorAll("span, strong, div, a")].filter((e) => {
+      const t = e.textContent.trim();
+      return (PLUS.test(t) || MINUS.test(t)) && !e.closest(".gr-net, .sr-only, [class*='VisuallyHidden']") && ![...e.children].some((c) => c.textContent.trim()) && rendered(e);
+    }) : [];
+    const plusEl = leaves.find((e) => PLUS.test(e.textContent.trim()));
+    const minusEl = leaves.find((e) => MINUS.test(e.textContent.trim()));
     if (!plusEl || !minusEl) { net?.remove(); return; }
     const n = (e) => +e.textContent.replace(/[^\d]/g, "");
     const add = n(plusEl), del = n(minusEl), diff = add - del;
@@ -836,16 +930,18 @@
 
   // Blocks that only clutter the Overview: the "Looking for an old friend?" notice and the
   // sidebar's "Activity (since you last interacted)" section (full Activity remains in the top button).
-  function tagNoise(scope) {
-    const mark = (re, attr, stop) => {
-      const n = textNodes(scope, re)[0];
+  const OLD_FRIEND = /^Looking for an old friend\?$/i;
+  const ACTIVITY_SINCE = /^Activity \(since you last interacted\)$/i;
+  function tagNoise(scope, oldFriendNodes, activityNodes) {
+    const mark = (nodes, attr, stop) => {
+      const n = nodes[0];
       let el = n?.parentElement;
       if (!el) return;
       while (el.parentElement && el.parentElement !== scope && !stop(el.parentElement)) el = el.parentElement;
       markOnly(attr, el);
     };
-    mark(/^Looking for an old friend\?$/i, "data-gr-oldfriend", (p) => p.querySelectorAll("a").length > 4 || !!p.querySelector("[data-gr-desc], #gr-cockpit"));
-    mark(/^Activity \(since you last interacted\)$/i, "data-gr-activity", (p) => !!p.querySelector("[data-gr-sb]") || p.matches("[data-testid='sticky-sidebar']"));
+    mark(oldFriendNodes, "data-gr-oldfriend", (p) => p.querySelectorAll("a").length > 4 || !!p.querySelector("[data-gr-desc], #gr-cockpit"));
+    mark(activityNodes, "data-gr-activity", (p) => !!p.querySelector("[data-gr-sb]") || p.matches("[data-testid='sticky-sidebar']"));
   }
 
   function tagPullPage() {
@@ -853,11 +949,16 @@
     tagPrHeader();
     tagSidebar();
     tagLayout();
-    tagMergeBox(scope);
+    // One walk over the page text for everything found by its text (was four walks).
+    const [status, preview, oldFriend, activity] = scanText(scope, [STATUS_TEXT, PREVIEW_TEXT, OLD_FRIEND, ACTIVITY_SINCE]);
+    tagMergeBox(scope, status);
     tagDescription();
-    tagPreviewToggle();
-    tagNoise(scope);
+    tagPreviewToggle(preview);
+    tagNoise(scope, oldFriend, activity);
     tagNetDiff();
+    // Parents of the sidebar items and of the commit rows (tighter gaps in CSS).
+    markParents("data-gr-sb-list", "[data-overview-sidebar-item]");
+    markParents("data-gr-commit-list", '[data-testid="timeline-item"][data-item-type="commits"]');
     GRCockpit.update({ settings, root, textNodes });
     updateToc();
     queueHeader();
@@ -874,6 +975,35 @@
       // checks, merge queue entry status ("Queue entry status details"), stacked PRs ("Stack #19177")
       if (/\bchecks?\b|status details|^stack\b/i.test(head) || /^entry-status-dialog/.test(d.id)) d.setAttribute("data-gr-drawer", "");
     }
+  }
+
+  // Open overlays, as attributes on <html> for the CSS: GitHub's side panel open
+  // (data-gr-side-open), our conversation modal (data-gr-modal-open, also set by
+  // cockpit.js), one of our drawers open (data-gr-drawer-open), and the list
+  // rows holding an open dialog (data-gr-row-dialog). The CSS used to ask
+  // `html:has(…)`, which re-matched the whole page on any class change anywhere.
+  // Always recomputed from the DOM, so a missed event cannot leave the page locked
+  // (two of these set `overflow: hidden` on <html>).
+  const SIDE = '[class*="prc-PageLayout-SidebarWrapper-"][data-position="end"]';
+  const SIDE_OPEN = `${SIDE}:not([class*="HiddenSidePanel"]):not([data-is-hidden="true"])`;
+  // Dialogs and side panels open and close by attribute alone, which the main
+  // observer (childList) does not see: each one gets its own attribute observer.
+  const overlayWatched = new WeakSet();
+  const overlayObserver = new MutationObserver(() => syncOverlays());
+  function syncOverlays() {
+    const off = isRepoCodePage();
+    if (!off) {
+      for (const el of document.querySelectorAll(`dialog, ${SIDE}`)) {
+        if (overlayWatched.has(el)) continue;
+        overlayWatched.add(el);
+        overlayObserver.observe(el, { attributes: true, attributeFilter: ["open", "class", "data-is-hidden"] });
+      }
+    }
+    root.toggleAttribute("data-gr-side-open", !off && !!document.querySelector(SIDE_OPEN));
+    root.toggleAttribute("data-gr-modal-open", !!document.getElementById("gr-modal"));
+    root.toggleAttribute("data-gr-drawer-open", !off && !!document.querySelector("dialog[open][data-gr-drawer], [data-gr-drawer]:not(dialog)"));
+    markSet("data-gr-row-dialog", off ? [] : [...document.querySelectorAll("dialog[open], [data-gr-drawer]:not(dialog)")]
+      .map((d) => d.parentElement?.closest("[data-gr-row]")).filter(Boolean));
   }
 
   // Drawer dialogs close on a click outside them (GitHub's dialogs only close from their
@@ -986,31 +1116,60 @@
     }
   }
 
+  // Left a list or a pull request for the repository itself: drop what we added.
+  // The observer stays connected so the next soft navigation still wakes us.
+  function settleRepo() {
+    document.getElementById("gr-toc")?.remove();
+    document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group, .gr-stack-head").forEach((el) => el.remove());
+    document.querySelectorAll("[data-gr-queue-sig]").forEach((el) => el.removeAttribute("data-gr-queue-sig"));
+    tagQueuePage(); // off the queue: clears data-gr-queue on <html>
+    closeActionsMenu();
+    GRCockpit.update({ settings, root, textNodes });
+    syncHeader();
+    syncOverlays();
+  }
+
+  // Each pass only runs what the current page can have. Files changed is the
+  // largest DOM after the code view, and scanning all its buttons for list
+  // controls every frame was wasted.
   function tag() {
+    if (isRepoCodePage()) { onRoute(); return; }
     if (!settings.enabled) {
       document.getElementById("gr-toc")?.remove();
       document.querySelectorAll(".gr-pr-num, .gr-copy-link, .gr-net, .gr-queue-group, .gr-stack-head").forEach((el) => el.remove());
       document.querySelectorAll("[data-gr-queue-sig]").forEach((el) => el.removeAttribute("data-gr-queue-sig"));
       GRCockpit.update({ settings, root, textNodes });
       syncHeader();
+      syncOverlays();
       return;
     }
-    observer.disconnect(); // don't react to our own changes
+    unobserve(); // don't react to our own changes
     try {
       tagDrawerDialogs();
       tagQueuePage();
-      tagMergePanel();
+      const pull = onPullRoute();
+      // The merge box is on pull pages; check groups also open in drawers from lists.
+      if (pull || document.querySelector("[data-gr-drawer]")) tagMergePanel();
       if (isPullPage()) tagPullPage();
-      else { if (/\/pull\/\d+\//.test(location.pathname)) queueHeader(); // Files changed, Commits, Checks: same header
-        tagListRows(); preferCompact(); tagStateFilter(); updateToc(); GRCockpit.update({ settings, root, textNodes }); } // outside Overview: tears down cockpit/modal
+      else {
+        queueHeader(); // Files changed, Commits, Checks: same header; elsewhere it clears a PR's leftovers
+        tagListRows();
+        // Density buttons and the Open/Closed filter sit above lists, never on a PR or issue page.
+        if (!pull && !/\/issues\/\d+/.test(location.pathname)) { preferCompact(); tagStateFilter(); }
+        updateToc();
+        GRCockpit.update({ settings, root, textNodes }); // outside Overview: tears down cockpit/modal
+      }
+      syncOverlays();
     } finally {
       observe();
     }
   }
 
+  window.addEventListener("popstate", onRoute);
+  document.addEventListener("turbo:load", onRoute);
+  document.addEventListener("turbo:render", onRoute);
   observe();
-  document.addEventListener("turbo:load", scheduleTag);
-  window.addEventListener("popstate", scheduleTag);
+  onRoute();
 })();
 // Loaded version (to check in the console whether the extension was reloaded).
 document.documentElement.setAttribute("data-gr-version", chrome.runtime?.getManifest?.().version || "dev");
